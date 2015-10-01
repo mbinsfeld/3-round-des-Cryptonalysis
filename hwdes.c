@@ -28,6 +28,10 @@ void unpack(int *pt, char *ca);
 void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 
+//Step 1: getCvals(ct) //basically just p inverse
+//Step 2: Build tables of possible sbox outputs for each possible input
+//Step 3: Figure out e vals
+
 int main()
 {
     int pt[2]={0x748502cd, 0x38451097};
