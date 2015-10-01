@@ -27,13 +27,15 @@ void getkey(int *key, char *rk, int round);
 void unpack(int *pt, char *ca);
 void pack(int *ct, char *ca);
 void dump(char *ca, int len);
+void ASboxTables();
 
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input
-//Step 3: Figure out e vals
+//Step 3: Figure out e vals by doing a few things and stuff
 
 int main()
 {
+    ASboxTables();
     int pt[2]={0x748502cd, 0x38451097};
     int ct[2];
     int key[2]={0x1a624c89, 0x520dec46};
@@ -110,6 +112,14 @@ static unsigned char s[][64] = {
    7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11 }
 };
+
+void ASboxTables(){
+  for(long i = 0; i < 4294967296; i++){
+    //all possible inputs
+    int temp = i * 2;
+  }
+  printf("done\n");//just checking to see how long this loop takes with basic arith.
+}
 
 // the permutation P is applied after the S-boxes
 static char p[] = { 0,
