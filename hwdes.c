@@ -32,6 +32,8 @@ void dump(char *ca, int len);
 void ASboxTables();
 void traverse_f_down();
 
+int sOut[8][exp2(6)][exp2[4]]
+
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input
 //Step 3: Figure out e vals by doing a few things and stuff
@@ -138,7 +140,7 @@ void ASboxTables(){
     for(int inputxor = 0; inputxor < (exp2(6)); inputxor++){
       //all possible inputs
       for(int outputxor; outputxor < (exp2(4)); outputxor++){
-        
+        //how do I build these fucking tables!!!!????
       }
     }
   }
