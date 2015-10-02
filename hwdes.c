@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 
 // My (slow) implementation of DES
 
@@ -32,7 +33,7 @@ void dump(char *ca, int len);
 void ASboxTables();
 void traverse_f_down();
 
-int sOut[8][exp2(6)][exp2[4]]
+//int sOut[8][exp2(6)][exp2[4]]
 
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input
@@ -152,6 +153,23 @@ void traverse_f_down(){
 
   unpack(l3, l3a);
   printf("testing: %s\n", l3a);
+}
+
+int* find_xor_pairs(int inputxor){
+  //int possibilities[(int)exp2(12)]
+  int* possibilities = malloc(((int)exp(12)) * sizeof(int));
+  int count = 0;
+  for(int i = 0; i < (exp2(6)/2); i++){
+    for(int j = 0; j >= (exp2(6)/2); j++){
+      if((i^j) == inputxor){
+        possibilities[count] = i;
+        count ++;
+        possibilities[count + 1] = j;
+        count ++;
+      }
+    }
+  }
+  return possibilities;
 }
 
 // the permutation P is applied after the S-boxes
