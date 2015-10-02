@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 
 // My (slow) implementation of DES
 
@@ -132,11 +133,14 @@ static unsigned char s[][64] = {
 };
 
 void ASboxTables(){
-  for(long i = 0; i < 4294967296; i++){
-    //all possible inputs
-    int temp = i * 2;
+  for(int sBox = 0; sbox < 8; i++){
+    for(int inputxor = 0; i < (exp2(6)); inputxor++){
+      //all possible inputs
+      for(int outputxor; i < (exp2(4)); i++){
+        
+      }
+    }
   }
-  printf("done\n");//just checking to see how long this loop takes with basic arith.
 }
 
 void traverse_f_down(){
