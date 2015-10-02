@@ -28,6 +28,7 @@ void unpack(int *pt, char *ca);
 void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 void ASboxTables();
+void traverse_f_down();
 
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input
@@ -35,12 +36,13 @@ void ASboxTables();
 
 int main()
 {
-    ASboxTables();
+    //ASboxTables();
     int pt[2]={0x748502cd, 0x38451097};
     int ct[2];
     int key[2]={0x1a624c89, 0x520dec46};
 
-    des_encrypt(pt, ct, key);
+    //des_encrypt(pt, ct, key);
+    traverse_f_down();
     printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
 }
 
@@ -135,6 +137,14 @@ void ASboxTables(){
     int temp = i * 2;
   }
   printf("done\n");//just checking to see how long this loop takes with basic arith.
+}
+
+void traverse_f_down(){
+  int* l3 = &pairs[0][1][0][0];
+  char l3a[65];
+
+  unpack(l3, l3a);
+  printf("testing: %s\n", l3a);
 }
 
 // the permutation P is applied after the S-boxes
