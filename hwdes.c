@@ -44,6 +44,22 @@ int main()
     printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
 }
 
+//Input/output pairs
+int pairs[][2][2][2] = {
+    {
+        { {0x748502cd, 0x38451097}, {0x2e48787d, 0xfb8509e6} },
+        { {0x38747564, 0x38451097}, {0xfc19cb45, 0xb6d9f494} }
+    },
+    {
+        { {0x48691102, 0x6acdff31}, {0xac777016, 0x3ddc98e1} },
+        { {0x375bd31f, 0x6acdff31}, {0x7d708f6d, 0x4bc7ef16} }
+    },
+    {
+        { {0x357418da, 0x013fec86}, {0x5a799643, 0x9823cf12} },
+        { {0x12549847, 0x013fec86}, {0xae46e276, 0x16c26b04} }
+    }
+};
+
 // the expansion function E()
 char exp1[]={  0,
 	     32,  1,  2,  3,  4,  5,
