@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 // My (slow) implementation of DES
 
@@ -133,10 +134,10 @@ static unsigned char s[][64] = {
 };
 
 void ASboxTables(){
-  for(int sBox = 0; sbox < 8; i++){
-    for(int inputxor = 0; i < (exp2(6)); inputxor++){
+  for(int sBox = 0; sBox < 8; sBox++){
+    for(int inputxor = 0; inputxor < (exp2(6)); inputxor++){
       //all possible inputs
-      for(int outputxor; i < (exp2(4)); i++){
+      for(int outputxor; outputxor < (exp2(4)); outputxor++){
         
       }
     }
