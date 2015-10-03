@@ -31,12 +31,9 @@ void unpack(int *pt, char *ca);
 void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 void ASboxTables();
-void traverse_f_down();
-<<<<<<< HEAD
+void traverse_f_down(int *l3a, int *l3b);
 //char *xor(char *ca1, char *ca2);
-=======
-void BiuldINTables();
->>>>>>> 94c2bc02038f8c0db5d66bb6cbbdd5220b3238ea
+void BuildINTables();
 
 //int sOut[8][exp2(6)][exp2[4]]
 
@@ -141,7 +138,7 @@ static unsigned char s[][64] = {
    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11 }
 };
 
-void BiuldINTables(){
+void BuildINTables(){
 
 }
 
