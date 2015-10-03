@@ -32,7 +32,11 @@ void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 void ASboxTables();
 void traverse_f_down();
+<<<<<<< HEAD
 //char *xor(char *ca1, char *ca2);
+=======
+void BiuldINTables();
+>>>>>>> 94c2bc02038f8c0db5d66bb6cbbdd5220b3238ea
 
 //int sOut[8][exp2(6)][exp2[4]]
 
@@ -137,15 +141,8 @@ static unsigned char s[][64] = {
    2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11 }
 };
 
-void ASboxTables(){
-  for(int sBox = 0; sBox < 8; sBox++){
-    for(int inputxor = 0; inputxor < (exp2(6)); inputxor++){
-      //all possible inputs
-      for(int outputxor; outputxor < (exp2(4)); outputxor++){
-        //how do I build these fucking tables!!!!????
-      }
-    }
-  }
+void BiuldINTables(){
+
 }
 
 /*char *xor(char *ca1, char *ca2){
