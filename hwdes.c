@@ -32,6 +32,7 @@ void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 void ASboxTables();
 void traverse_f_down();
+//char *xor(char *ca1, char *ca2);
 
 //int sOut[8][exp2(6)][exp2[4]]
 
@@ -47,7 +48,7 @@ int main()
     int key[2]={0x1a624c89, 0x520dec46};
 
     //des_encrypt(pt, ct, key);
-    traverse_f_down();
+    //traverse_f_down(&pairs[0][0][0][0], &pairs[0][1][0][0]);
     printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
 }
 
@@ -147,14 +148,49 @@ void ASboxTables(){
   }
 }
 
-void traverse_f_down(){
-  int* l3 = &pairs[0][1][0][0];
-  char l3a[65];
+/*char *xor(char *ca1, char *ca2){
+  char *xor_temp = malloc(56);
 
-  unpack(l3, l3a);
-  printf("testing: %s\n", l3a);
+  if (sizeof(ca1)!=sizeof(ca2)){
+    printf("Character arrays are not same size... exiting...");
+    return 0;
+  }
+  for (int i; i < sizeof(ca1);i++){
+    xor_temp[i] = ca1[i] ^ ca2[i];
+  }
+  return xor_temp;
 }
 
+void traverse_f_down(int *l3a, int *l3b){
+
+  char l3a_t[32], l3b_t;
+  int e_block[8], te_block[32];
+
+  unpack(l3c, l3a);
+  int i;
+   for (i=1; i <= 32; i++)
+   {
+    te_block[i] = l3a[i];
+    printf("%d", te_block[i]);
+    if (i % 4 == 0) printf(" ");
+   }
+  
+  int k = 0;
+  //Need to implement E block expansion here.
+  //for (int j = 0; j < 32; j+=4){
+  //  for (int a = -1; a < 4; a++){
+     //memcpy(e_block[k], te_block, te_block[a]);
+ // }
+  k++;
+  //}
+//}
+//for (int l = 0; l < 8; l++){
+ // printf("%d ", e_block[l]);
+//}
+  dump(l3a, 32);
+ 
+}
+*/
 int* find_xor_pairs(int inputxor){
   //int possibilities[(int)exp2(12)]
   int* possibilities = malloc(((int)exp(12)) * sizeof(int));
