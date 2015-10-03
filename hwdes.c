@@ -36,7 +36,7 @@ void traverse_f_down();
 //int sOut[8][exp2(6)][exp2[4]]
 
 //Step 1: getCvals(ct) //basically just p inverse
-//Step 2: Build tables of possible sbox outputs for each possible input
+//Step 2: Build tables of possible sbox outputs for each possible input xor
 //Step 3: Figure out e vals by doing a few things and stuff
 
 int main()
