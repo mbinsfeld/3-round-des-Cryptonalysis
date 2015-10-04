@@ -37,12 +37,17 @@ void unpack_32(int *pt, char *ca);
 void pack_32(int *ct, char *ca);
 int* find_xor_pairs(int inputxor);
 void BuildINTables();
+void unpack_6(int *pt, char *ca);
+
 
 //int sOut[8][exp2(6)][exp2[4]]
 
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input xor
 //Step 3: Figure out e vals by doing a few things and stuff
+
+//INTables[s][inputxor][outputxor][possibilities];
+int INTables[8][64][64][64];
 
 //Input/output pairs
 int pairs[][2][2][2] = {
@@ -62,6 +67,14 @@ int pairs[][2][2][2] = {
 
 int main()
 {
+    int box_number = 0;
+    BuildINTables();
+    /*for(int i = 0; i < 64; i++){
+      if(INTables[box_number][52][1][i] >= 0)
+        printf("%u\n", INTables[box_number][52][1][i]);
+    }*/
+
+/*
     //ASboxTables();
     int pt[2]={0x748502cd, 0x38451097};
     int ct[2];
@@ -70,10 +83,10 @@ int main()
     //des_encrypt(pt, ct, key);
     attack_DES(&pairs[0][0][0][0], &pairs[0][1][0][0], &pairs[0][0][0][1], &pairs[0][1][0][1]);
     printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
+    */
 }
 
-//INTables[s][inputxor][outputxor][possibilities];
-int INTables[8][64][64][64];
+
 
 // the expansion function E()
 char exp1[]={  0,
@@ -145,18 +158,49 @@ static unsigned char s[][64] = {
 };
 
 void BuildINTables(){
+
+  for(int sbox = 0; sbox < 8; sbox++){
+    for(unsigned int inputxor = 0; inputxor < 64; inputxor++){
+      for(int outputxor = 0; outputxor < 16; outputxor++){
+        int length = 64;
+        for(int possibility = 0; possibility < length; possibility++){
+          INTables[sbox][inputxor][outputxor][possibility] = -1;
+          //printf("hello from 174\n");
+        }
+      }
+    }
+  }
+
   //INTables[s][inputxor][outputxor][possibilities];
   //int INTables[8][64][64][64];
   //each sbox
   for(int sbox = 0; sbox < 8; sbox++){
+    //printf("hello from line 61\n");
     //all possible input xors
-    for(unsigned int inputxor = 0; inputxor < 64; inputxor++){
+    for(int inputxor = 0; inputxor < 64; inputxor++){
       int* possibilitiesArray = find_xor_pairs(inputxor);
+      //printf("hello\n");
       //each possibility
-      for(unsigned int possibility = 0; possibility < sizeof(possibilitiesArray)/sizeof(possibilitiesArray[0]); possibility++){
-        int temp = possibilitiesArray[possibility];
-        int outputxor = s[sbox][temp];
+      int length = 64;
+      for(int possibility = 0; possibility < length; possibility++){
+        //printf("hello from 169\n");
+        int pos = possibilitiesArray[possibility];
+        int* posptr = &pos;
+        char temp[7]; 
+
+        unpack_6(posptr, temp);
+        char row[2] = {temp[1], temp[6]};
+        char collumn[4] = {temp[2], temp[3], temp[4], temp[5]};
+        //dump(temp, 6);
+        //printf("%d\n", temp[1]);
+        //printf("hello\n");
+        //printf("%d\n", temp);
+        //printf("possibility: %d\n", possibility);
+        //printf("%d\n", temp);
+        int outputxor = s[sbox][pos];
+        //printf("hello from 172\n");
         INTables[sbox][inputxor][outputxor][possibility] = possibilitiesArray[possibility];
+        //printf("hello from 174\n");
       }
     }
   }
@@ -166,24 +210,22 @@ void BuildINTables(){
 
 int* find_xor_pairs(int inputxor){
   //int possibilities[(int)exp2(12)]
-  int possibilities[64];
-  int count = 0;
+  int* possibilities = malloc(64 * sizeof(int));
+  int* altPossibilities = malloc(64 * sizeof(int));
   for(int i = 0; i < 64; i++){
-    for(int j = 0; j >= 64; j++){
-      if((i^j) == inputxor){
-        possibilities[count] = i;
-        count ++;
-        possibilities[count + 1] = j;
-        count ++;
-      }
+    possibilities[i] = -1;
+    altPossibilities[i] = -1;
+  }
+  for(int i = 0; i < 64; i++){
+    possibilities[i] = i^inputxor;
+  }
+  for(int i = 0; i < 64; i++){
+    if(possibilities[i] != -1){
+      altPossibilities[i] = inputxor^possibilities[i];
+      //printf("%d\n", altPossibilities[i]);
     }
   }
-  //int temp[count];
-  int* temp = malloc(count * sizeof(int));
-  for(int i = 0; i < count; count++){
-    temp[i] = possibilities[i];
-  }
-  return temp; 
+  return possibilities; 
 }
 
 // the permutation P is applied after the S-boxes
@@ -393,6 +435,22 @@ void unpack_32(int *pt, char *ca)
     int a = pt[0];
 
     for (i=32; i >= 1; i--)
+    {
+  ca[i] = (a & 1);
+  a >>= 1;
+
+    }
+
+    //dump(ca, 64);
+}
+
+//unpacks 32 bit values into a char array
+void unpack_6(int *pt, char *ca)
+{
+    int i;
+    int a = pt[0];
+
+    for (i=6; i >= 1; i--)
     {
   ca[i] = (a & 1);
   a >>= 1;
