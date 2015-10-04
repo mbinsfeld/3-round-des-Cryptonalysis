@@ -139,7 +139,21 @@ static unsigned char s[][64] = {
 };
 
 void BuildINTables(){
-
+  //INTables[s][inputxor][outputxor][possibilities];
+  int INTables[8][64][64][64];
+  //each sbox
+  for(int sbox = 0; sbox < 8; sbox++){
+    //all possible input xors
+    for(unsigned int inputxor = 0; inputxor < 64; inputxor++){
+      int* possibilitiesArray = find_xor_pairs(inputxor);
+      //each possibility
+      for(unsigned int possibility = 0; possibility < sizeof(possibilitiesArray)/sizeof(possibilitiesArray[0]); possibility++){
+        int temp = possibilitiesArray[possibility];
+        int outputxor = s[sbox][temp];
+        INTables[sbox][inputxor][outputxor][possibility] = possibilitiesArray[possibility];
+      }
+    }
+  }
 }
 
 /*char *xor(char *ca1, char *ca2){
@@ -185,12 +199,12 @@ void traverse_f_down(int *l3a, int *l3b){
  
 }
 */
-int* find_xor_pairs(int inputxor){
+int* find_xor_pairs(unsigned int inputxor){
   //int possibilities[(int)exp2(12)]
-  int* possibilities = malloc(((int)exp(12)) * sizeof(int));
+  int possibilities[64];
   int count = 0;
-  for(int i = 0; i < (exp2(6)/2); i++){
-    for(int j = 0; j >= (exp2(6)/2); j++){
+  for(int i = 0; i < 64; i++){
+    for(int j = 0; j >= 64; j++){
       if((i^j) == inputxor){
         possibilities[count] = i;
         count ++;
@@ -199,7 +213,12 @@ int* find_xor_pairs(int inputxor){
       }
     }
   }
-  return possibilities;
+  //int temp[count];
+  int* temp = malloc(count * sizeof(int));
+  for(int i = 0; i < count; count++){
+    temp[i] = possibilities[i];
+  }
+  return temp; 
 }
 
 // the permutation P is applied after the S-boxes
