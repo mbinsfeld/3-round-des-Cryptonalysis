@@ -35,12 +35,18 @@ void traverse_f_down(int *l3a, int *l3b);
 void BuildINTables();
 void unpack_32(int *pt, char *ca);
 void invert_p(int *R3a, int *R3b);
+int* find_xor_pairs(int inputxor);
+void BuildINTables();
 
 //int sOut[8][exp2(6)][exp2[4]]
 
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input xor
 //Step 3: Figure out e vals by doing a few things and stuff
+
+
+//INTables[s][inputxor][outputxor][possibilities];
+int INTables[8][64][64][64];
 
 //Input/output pairs
 int pairs[][2][2][2] = {
@@ -143,7 +149,7 @@ static unsigned char s[][64] = {
 
 void BuildINTables(){
   //INTables[s][inputxor][outputxor][possibilities];
-  int INTables[8][64][64][64];
+  //int INTables[8][64][64][64];
   //each sbox
   for(int sbox = 0; sbox < 8; sbox++){
     //all possible input xors
@@ -177,12 +183,8 @@ void traverse_f_down(int *l3a, int *l3b){
 }
 
 
-int* find_xor_pairs(unsigned int inputxor){
-
-
 
 int* find_xor_pairs(int inputxor){
->>>>>>> 2cc4ddb427c9cf6033a1f237b7fc256c5f79d5e8
   //int possibilities[(int)exp2(12)]
   int possibilities[64];
   int count = 0;
@@ -214,7 +216,6 @@ void invert_p(int *R3a, int *R3b){
   
   char R3_R[33];
 
-  unpack()
 
   for (int m = 1; m <= 32; m++){
     R3a[m] ^= R3b[m];
