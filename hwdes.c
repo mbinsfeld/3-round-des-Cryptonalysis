@@ -38,6 +38,7 @@ void attack_DES();
 void BuildINTables();
 void unpack_32(int *pt, char *ca);
 void pack_6(int *ct, char *ca);
+void pack_4(int *ct, char *ca);
 int* find_xor_pairs(int inputxor);
 void BuildINTables();
 void unpack_6(int *pt, char *ca);
@@ -321,10 +322,10 @@ void attack_DES(){
   int *r3b = &pairs[PAIRS][1][1][1];
 
   char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], E_t[49];
-  char l0a_t[33], l0b_t[33], inverted[33];
+  char l0a_t[33], l0b_t[33], inverted[33], temp[8];
   int i, back_to_int;
-  char *E[9], *C[9];
-  int temp_e[7], temp_c[5];
+  int E[9], C[9];
+  int temp_e, temp_c;
 
   unpack_32(l3a, l3a_t);
   unpack_32(l3b, l3b_t);
@@ -364,25 +365,38 @@ void attack_DES(){
     C_t[p[i]] = inverted[p[i]];
 
    dump(E_t, 48);
+   dump(C_t, 32);
   //Put E and C possibilities into array as ints
-  /*int len = 0;
-  int j = 0;
-  int k = 0;
-  for (i = 1; i < 48; i++){
-    if(i%6==0){
-      temp_e[j] = E_t[i];
-      pack_6(temp_e, E[k]);
-      k++;
-      j = 0;
-    }
-    else{
-      temp_e[j] = E_t[i];
-      j++;
-    }
+  int k = 1;
+  unsigned int result = 0;
 
-      }
-    dump(E, 48);
-*/
+  for (i = 1; i <= 48; i+=6){
+      temp[0] = 0;
+    for(int j = 0; j < 6; j++){
+       temp[j+1] = E_t[j+i]; 
+
+    }
+    pack_6(&temp_e, temp);
+    E[k] = temp_e;
+    k++;
+  }
+
+  k=1;
+  for (i = 1; i <= 32; i+=4){
+      temp[0] = 0;
+    for(int j = 0; j < 4; j++){
+       temp[j+1] = C_t[j+i]; 
+
+    }
+    dump(temp, 4);
+    pack_4(&temp_c, temp);
+    C[k] = temp_c;
+    k++;
+  }
+  for(i=1;i<=8;i++){
+    printf("%d ", C[i]);
+  }
+
 }
 
 void des_encrypt(int *pt, int *ct, int *key)
@@ -603,6 +617,10 @@ void pack_6(int *ct, char *ca)
     }
 }
 
+<<<<<<< HEAD
+=======
+// this routine packs a 0-1 char array into a 6-bit int
+>>>>>>> afc3d33809aa5ac667746ad8efd16b95d4c8b0a5
 void pack_4(int *ct, char *ca)
 {
     int i;
@@ -615,6 +633,7 @@ void pack_4(int *ct, char *ca)
     }
 }
 
+<<<<<<< HEAD
 void pack_2(int *ct, char *ca)
 {
     int i;
@@ -627,6 +646,8 @@ void pack_2(int *ct, char *ca)
     }
 }
 
+=======
+>>>>>>> afc3d33809aa5ac667746ad8efd16b95d4c8b0a5
 // dump a 0-1 char array for debugging purposes
 void dump(char *ca, int len)
 {
