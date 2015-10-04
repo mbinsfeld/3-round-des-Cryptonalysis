@@ -25,16 +25,19 @@
 #define APPLY_IPI  0
 #define FINAL_REVERSE 0
 
+// Set this from 0-2 to change pt/ct pairs
+#define PAIRS 0 
+
 void des_encrypt(int *pt, int *ct, int *key);
 void getkey(int *key, char *rk, int round);
 void unpack(int *pt, char *ca);
 void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 void ASboxTables();
-void attack_DES(int *l3a, int *l3b, int *R3a, int *R3b);
+void attack_DES();
 void BuildINTables();
 void unpack_32(int *pt, char *ca);
-void pack_32(int *ct, char *ca);
+void pack_6(int *ct, char *ca);
 int* find_xor_pairs(int inputxor);
 void BuildINTables();
 
@@ -68,7 +71,7 @@ int main()
     int key[2]={0x1a624c89, 0x520dec46};
 
     //des_encrypt(pt, ct, key);
-    attack_DES(&pairs[0][0][0][0], &pairs[0][1][0][0], &pairs[0][0][0][1], &pairs[0][1][0][1]);
+    attack_DES();
     printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
 }
 
@@ -192,38 +195,79 @@ static char p[] = { 0,
  2,  8, 24, 14, 32, 27,  3,  9, 19, 13, 30,  6, 22, 11,  4, 25 };
 
 
-void attack_DES(int *l3a, int *l3b, int *r3a, int *r3b){
+void attack_DES(){
 
-  char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], r3_r[33], E[49];
+  int *l0a = &pairs[PAIRS][0][0][0];
+  int *l0b = &pairs[PAIRS][1][0][0];
+  int *r0a = &pairs[PAIRS][0][0][1];
+  int *r0b = &pairs[PAIRS][1][0][1];
+  int *l3a = &pairs[PAIRS][0][1][0];
+  int *l3b = &pairs[PAIRS][1][1][0];
+  int *r3a = &pairs[PAIRS][0][1][1];
+  int *r3b = &pairs[PAIRS][1][1][1];
+
+  char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], E_t[49];
+  char l0a_t[33], l0b_t[33], inverted[33];
+  int i, back_to_int;
+  char *E[9], *C[9];
+  int temp_e[7], temp_c[5];
 
   unpack_32(l3a, l3a_t);
   unpack_32(l3b, l3b_t);
   unpack_32(r3a, r3a_t);
   unpack_32(r3b, r3b_t);
-  
-  //Diff for Left bits
-  for (int m = 1; m <= 32; m++){
-    l3a_t[m] ^= l3b_t[m];
-  }
-  printf("LEFT_XOR: "); dump(l3a_t, 32);
+  unpack_32(l0a, l0a_t);
+  unpack_32(l0b, l0b_t);
 
-  //Diff for Right bits
-  for (int m = 1; m <= 32; m++){
-    r3a[m] ^= r3b[m];
+  //First we traverse down f to find E
+  //Diff for L3/R2
+  for (i = 1; i <= 32; i++){
+    l3a_t[i] ^= l3b_t[i];
   }
 
   //Expand Left
-  for (int n = 1; n <= 48; n++)
-      E[n] = l3a_t[exp1[n]];
-   printf("Expansion: "); dump(E, 48);
+  for (i = 1; i <= 48; i++)
+      E_t[i] = l3a_t[exp1[i]];
 
-  //Reverse P
-  /*for (int i = 32; i <= 1; i--)
-    r3_r[i] = r3a[p[i]];
-  dump(r3_r, 32);
-  for (int i = 1; i <= 32; i++)
-      r3_r[i] = r3a[p[i]];
-  dump(r3_r, 32);
+  //Now we will traverse up f to find C
+  //Diff for R3
+  for (i = 1; i <= 32; i++){
+    r3a_t[i] ^= r3b_t[i];
+  }
+
+  //Diff for L0
+  for (i = 1; i <= 32; i++){
+    l0a_t[i] ^= l0b_t[i];
+  }
+
+  //Difference of differences of L0 and R3
+  for (i = 1; i <= 32; i++){
+    inverted[i] = l0a_t[i] ^ r3a_t[i];
+  }
+
+  //Reverse P using inverted array to find C
+  for (i = 1; i <= 32; i++)
+    C_t[p[i]] = inverted[p[i]];
+
+   dump(E_t, 48);
+  //Put E and C possibilities into array as ints
+  /*int len = 0;
+  int j = 0;
+  int k = 0;
+  for (i = 1; i < 48; i++){
+    if(i%6==0){
+      temp_e[j] = E_t[i];
+      pack_6(temp_e, E[k]);
+      k++;
+      j = 0;
+    }
+    else{
+      temp_e[j] = E_t[i];
+      j++;
+    }
+
+      }
+    dump(E, 48);
 */
 }
 
@@ -416,14 +460,14 @@ void pack(int *ct, char *ca)
     }
 }
 
-// this routine packs a 0-1 char array into a 32-bit int
-void pack_32(int *ct, char *ca)
+// this routine packs a 0-1 char array into a 6-bit int
+void pack_6(int *ct, char *ca)
 {
     int i;
 
     ct[0] = 0;
 
-    for (i=1; i <= 32; i++)
+    for (i=1; i <= 6; i++)
     {
   ct[0] <<= 1;        ct[0] += ca[i];   
     }
