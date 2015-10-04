@@ -32,26 +32,15 @@ void pack(int *ct, char *ca);
 void dump(char *ca, int len);
 void ASboxTables();
 void traverse_f_down(int *l3a, int *l3b);
-//char *xor(char *ca1, char *ca2);
 void BuildINTables();
+void unpack_32(int *pt, char *ca);
+void invert_p(int *R3a, int *R3b);
 
 //int sOut[8][exp2(6)][exp2[4]]
 
 //Step 1: getCvals(ct) //basically just p inverse
 //Step 2: Build tables of possible sbox outputs for each possible input xor
 //Step 3: Figure out e vals by doing a few things and stuff
-
-int main()
-{
-    //ASboxTables();
-    int pt[2]={0x748502cd, 0x38451097};
-    int ct[2];
-    int key[2]={0x1a624c89, 0x520dec46};
-
-    //des_encrypt(pt, ct, key);
-    //traverse_f_down(&pairs[0][0][0][0], &pairs[0][1][0][0]);
-    printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
-}
 
 //Input/output pairs
 int pairs[][2][2][2] = {
@@ -68,6 +57,20 @@ int pairs[][2][2][2] = {
         { {0x12549847, 0x013fec86}, {0xae46e276, 0x16c26b04} }
     }
 };
+
+int main()
+{
+    //ASboxTables();
+    int pt[2]={0x748502cd, 0x38451097};
+    int ct[2];
+    int key[2]={0x1a624c89, 0x520dec46};
+
+    //des_encrypt(pt, ct, key);
+    traverse_f_down(&pairs[0][0][0][0], &pairs[0][1][0][0]);
+    invert_p(&pairs[0][0][0][1], &pairs[0][1][0][1]);
+    printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
+}
+
 
 // the expansion function E()
 char exp1[]={  0,
@@ -156,50 +159,30 @@ void BuildINTables(){
   }
 }
 
-/*char *xor(char *ca1, char *ca2){
-  char *xor_temp = malloc(56);
-
-  if (sizeof(ca1)!=sizeof(ca2)){
-    printf("Character arrays are not same size... exiting...");
-    return 0;
-  }
-  for (int i; i < sizeof(ca1);i++){
-    xor_temp[i] = ca1[i] ^ ca2[i];
-  }
-  return xor_temp;
-}
 
 void traverse_f_down(int *l3a, int *l3b){
 
-  char l3a_t[32], l3b_t;
-  int e_block[8], te_block[32];
+  char l3a_t[33], l3b_t[33], E[49];
 
-  unpack(l3c, l3a);
-  int i;
-   for (i=1; i <= 32; i++)
-   {
-    te_block[i] = l3a[i];
-    printf("%d", te_block[i]);
-    if (i % 4 == 0) printf(" ");
-   }
+  unpack_32(l3a, l3a_t);
+  unpack_32(l3b, l3b_t);
   
-  int k = 0;
-  //Need to implement E block expansion here.
-  //for (int j = 0; j < 32; j+=4){
-  //  for (int a = -1; a < 4; a++){
-     //memcpy(e_block[k], te_block, te_block[a]);
- // }
-  k++;
-  //}
-//}
-//for (int l = 0; l < 8; l++){
- // printf("%d ", e_block[l]);
-//}
-  dump(l3a, 32);
- 
+  for (int m = 1; m <= 32; m++){
+    l3a_t[m] ^= l3b_t[m];
+  }
+
+  for (int n = 1; n <= 48; n++)
+      E[n] = l3a_t[exp1[n]];
+
 }
-*/
+
+
 int* find_xor_pairs(unsigned int inputxor){
+
+
+
+int* find_xor_pairs(int inputxor){
+>>>>>>> 2cc4ddb427c9cf6033a1f237b7fc256c5f79d5e8
   //int possibilities[(int)exp2(12)]
   int possibilities[64];
   int count = 0;
@@ -225,6 +208,26 @@ int* find_xor_pairs(unsigned int inputxor){
 static char p[] = { 0,
 16,  7, 20, 21, 29, 12, 28, 17,  1, 15, 23, 26,  5, 18, 31, 10,
  2,  8, 24, 14, 32, 27,  3,  9, 19, 13, 30,  6, 22, 11,  4, 25 };
+
+
+void invert_p(int *R3a, int *R3b){
+  
+  char R3_R[33];
+
+  unpack()
+
+  for (int m = 1; m <= 32; m++){
+    R3a[m] ^= R3b[m];
+  }
+
+  for (int i = 32; i <= 1; i--)
+    R3_R[i] = R3a[p[i]];
+  dump(R3_R, 32);
+  for (int i = 1; i <= 32; i++)
+      R3_R[i] = R3a[p[i]];
+  dump(R3_R, 32);
+
+}
 
 void des_encrypt(int *pt, int *ct, int *key)
 {
@@ -381,6 +384,21 @@ void unpack(int *pt, char *ca)
 	a >>= 1;
 	ca[i+32] = (b & 1);
 	b >>= 1;
+    }
+
+    //dump(ca, 64);
+}
+//unpacks 32 bit values into a char array
+void unpack_32(int *pt, char *ca)
+{
+    int i;
+    int a = pt[0];
+
+    for (i=32; i >= 1; i--)
+    {
+  ca[i] = (a & 1);
+  a >>= 1;
+
     }
 
     //dump(ca, 64);
