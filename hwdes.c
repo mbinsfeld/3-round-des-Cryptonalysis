@@ -41,6 +41,8 @@ void pack_6(int *ct, char *ca);
 int* find_xor_pairs(int inputxor);
 void BuildINTables();
 void unpack_6(int *pt, char *ca);
+void pack_2(int *ct, char *ca);
+void pack_4(int *ct, char *ca);
 
 
 //int sOut[8][exp2(6)][exp2[4]]
@@ -50,7 +52,7 @@ void unpack_6(int *pt, char *ca);
 //Step 3: Figure out e vals by doing a few things and stuff
 
 //INTables[s][inputxor][outputxor][possibilities];
-int INTables[8][64][64][64];
+int INTables[8][64][16][128];
 
 //Input/output pairs
 int pairs[][2][2][2] = {
@@ -70,12 +72,17 @@ int pairs[][2][2][2] = {
 
 int main()
 {
-    int box_number = 0;
+
     BuildINTables();
-    /*for(int i = 0; i < 64; i++){
-      if(INTables[box_number][52][1][i] >= 0)
-        printf("%u\n", INTables[box_number][52][1][i]);
-    }*/
+    for (int box_number = 0; box_number < 8; box_number++){
+      printf("box_number %d\n", box_number);
+      for(int i = 0; i < 128; i++){
+        if(INTables[box_number][52][1][i] >= 0){
+          //printf("%u\n", INTables[box_number][0x34][1][i]);
+          printf("%u\n", INTables[box_number][52][1][i]);
+        }
+      }
+    }
 
 /*
     //ASboxTables();
@@ -165,10 +172,9 @@ void BuildINTables(){
   for(int sbox = 0; sbox < 8; sbox++){
     for(unsigned int inputxor = 0; inputxor < 64; inputxor++){
       for(int outputxor = 0; outputxor < 16; outputxor++){
-        int length = 64;
+        int length = 130;
         for(int possibility = 0; possibility < length; possibility++){
           INTables[sbox][inputxor][outputxor][possibility] = -1;
-          //printf("hello from 174\n");
         }
       }
     }
@@ -178,33 +184,66 @@ void BuildINTables(){
   //int INTables[8][64][64][64];
   //each sbox
   for(int sbox = 0; sbox < 8; sbox++){
-    //printf("hello from line 61\n");
     //all possible input xors
     for(int inputxor = 0; inputxor < 64; inputxor++){
-      int* possibilitiesArray = find_xor_pairs(inputxor);
-      //printf("hello\n");
-      //each possibility
-      int length = 64;
-      for(int possibility = 0; possibility < length; possibility++){
-        //printf("hello from 169\n");
-        int pos = possibilitiesArray[possibility];
-        int* posptr = &pos;
-        char temp[7]; 
-
-        unpack_6(posptr, temp);
-        char row[2] = {temp[1], temp[6]};
-        char collumn[4] = {temp[2], temp[3], temp[4], temp[5]};
-        //dump(temp, 6);
-        //printf("%d\n", temp[1]);
-        //printf("hello\n");
-        //printf("%d\n", temp);
-        //printf("possibility: %d\n", possibility);
-        //printf("%d\n", temp);
-        int outputxor = s[sbox][pos];
-        //printf("hello from 172\n");
-        INTables[sbox][inputxor][outputxor][possibility] = possibilitiesArray[possibility];
-        //printf("hello from 174\n");
+      int possibilitiesArray[130];
+      int* tempArray = find_xor_pairs(inputxor);
+      for(int i = 0; i < 130; i++){
+        possibilitiesArray[i] = tempArray[i];
       }
+      free(tempArray);
+      //each possibility
+      //printf("%d\n", inputxor);
+      int length = 130;
+      for(int possibility = 0; possibility < length; possibility++){
+        //if(possibilitiesArray[possibility] != -1){
+          int pos = possibilitiesArray[possibility];
+          int* posptr = &pos;
+          char temp[7]; 
+
+          unpack_6(posptr, temp);
+          //printf("%d\n", temp[6]);
+          char rowtemp[3] = {0, temp[1], temp[6]};
+          //printf("rowtemp, %d, %d\n", rowtemp[1], rowtemp[2]);
+          //dump(rowtemp, 2);
+          char collumntemp[5] = {0, temp[2], temp[3], temp[4], temp[5]};
+          int row;
+          int collumn;
+          pack_2(&row, rowtemp);
+         // printf("packed row: %d\n", row);
+          printf("\n");
+          pack_4(&collumn, collumntemp);
+
+          int sbox_position = (row * 16) + collumn;
+
+          //int outputxor = s[sbox][sbox_position];
+          int outputxor = s[sbox][(temp[1]*2+temp[6])*16 +
+        temp[2]*8 + temp[3]*4 + temp[4]*2 + temp[5]];
+          //outputxor = outputxor&1;
+          //outputxor >>= 1; 
+          //printf("outputxor: %d\n", outputxor);
+          INTables[sbox][inputxor][outputxor][possibility] = pos;
+          if(sbox == 0 && inputxor == 52 && outputxor == 1){
+            //printf("sbox: %d, inputxor: %d, outputxor: %d, possibilityIndex: %d, possibilitval: %d\n", sbox, inputxor, outputxor, possibility, possibilitiesArray[possibility]);
+          }
+        //}
+      }
+      /*printf("\n");
+      printf("\n");
+      printf("\n");
+      printf("\n");
+      printf("\n");
+      printf("\n");*/
+      /*printf("inputxor: %d\n", inputxor);
+      for(int i = 0; i < 64; i++){
+        printf("    %d\n", possibilitiesArray[i]);
+      }
+      printf("\n");
+      printf("\n");
+      printf("\n");
+      printf("\n");
+      printf("\n");
+      printf("\n");*/
     }
   }
 }
@@ -213,21 +252,54 @@ void BuildINTables(){
 
 int* find_xor_pairs(int inputxor){
   //int possibilities[(int)exp2(12)]
-  int* possibilities = malloc(64 * sizeof(int));
-  int* altPossibilities = malloc(64 * sizeof(int));
-  for(int i = 0; i < 64; i++){
+  int* possibilities = malloc(130 * sizeof(int));
+  //int* altPossibilities = malloc(64 * sizeof(int));
+  for(int i = 0; i < 130; i++){
     possibilities[i] = -1;
-    altPossibilities[i] = -1;
   }
+  int count = 0;
   for(int i = 0; i < 64; i++){
-    possibilities[i] = i^inputxor;
+    for(int j = 0; j < 64; j++){
+      //printf("i: %d: j%d\n", i, j);
+      if((i^j) == inputxor){
+        char ich[7], jch[7], inputch[7];
+        int* iptr = &i;
+        int* jptr = &j;
+        int* inputptr = &inputxor;
+        unpack_6(iptr, ich);
+        unpack_6(jptr, jch);
+        unpack_6(inputptr, inputch);
+        printf("i\n");
+        dump(ich, 6);
+        printf("j\n");
+        dump(jch, 6);
+        printf("input\n");
+        dump(inputch, 6);
+        printf("\n");
+
+
+        if(count >= 128){
+          printf("not enough space\n");
+          printf("i: %d, j: %d count: %d\n, inputxor: %d", i, j, count, inputxor);
+          exit(1);
+        }
+        possibilities[count] = j;
+        count++;
+        //printf("test\n");
+        //possibilities[count] = j;
+        //count++;
+      }
+    }
   }
-  for(int i = 0; i < 64; i++){
+
+  printf("%d possibilities calculated for inputxor: %d\n", count, inputxor);
+
+  /*for(int i = 0; i < 64; i++){
     if(possibilities[i] != -1){
       altPossibilities[i] = inputxor^possibilities[i];
       //printf("%d\n", altPossibilities[i]);
     }
-  }
+  }*/
   return possibilities; 
 }
 
@@ -526,6 +598,30 @@ void pack_6(int *ct, char *ca)
     ct[0] = 0;
 
     for (i=1; i <= 6; i++)
+    {
+  ct[0] <<= 1;        ct[0] += ca[i];   
+    }
+}
+
+void pack_4(int *ct, char *ca)
+{
+    int i;
+
+    ct[0] = 0;
+
+    for (i=1; i <= 4; i++)
+    {
+  ct[0] <<= 1;        ct[0] += ca[i];   
+    }
+}
+
+void pack_2(int *ct, char *ca)
+{
+    int i;
+
+    ct[0] = 0;
+
+    for (i=1; i <= 2; i++)
     {
   ct[0] <<= 1;        ct[0] += ca[i];   
     }
