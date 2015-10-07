@@ -28,7 +28,7 @@
 #define FINAL_REVERSE 0
 
 // Set this from 0-2 to change pt/ct pairs
-#define PAIRS 2
+#define PAIRS 0
 
 void des_encrypt(int *pt, int *ct, int *key);
 void getkey(int *key, char *rk, int round);
@@ -308,14 +308,15 @@ void attack_DES(){
     C[k] = temp_c;
     k++;
   }
-  printf("\nC:\n");
+  /*printf("\nC:\n");
 for (int i = 0; i < 8; i++){
     printf(" %d", C[i]);
-  }
+  }*/
 
 BuildINTables(); 
 //printf("test\n");
 std::vector<std::vector<int> > B;
+std::vector<std::vector<int> > J;
  for (int i = 0; i < 8; i++){
   std::vector<int> v = INTables[i][E[i]][C[i]];
   //rintf("test2\n");
@@ -326,6 +327,7 @@ std::vector<std::vector<int> > B;
       B[i].push_back(v[j]);
   }
  }
+ /*
  for (int i = 0; i < B.size(); ++i)
  {
   printf("Possibilities for B%d: \n", i+1);
@@ -334,8 +336,26 @@ std::vector<std::vector<int> > B;
    {
      printf("%d\n", bs[j]);
    }
+ }*/
+for (int i = 0; i < 8; ++i){
+   std::vector<int> bs = B[i];
+   std::vector<int> placeholder2;
+   J.push_back(placeholder2);
+   for(int j = 0; j < bs.size(); ++j){
+      J[i].push_back(bs[j]^E[i]);
+   }
+}
+  /*
+for (int i = 0; i < J.size(); ++i)
+ {
+  printf("Possibilities for J%d: \n", i+1);
+   std::vector<int> Js = J[i];
+   for (int j = 0; j < Js.size(); ++j)
+   {
+     printf("%d\n", Js[j]);
+   }
  }
-
+*/
 }
 
 void des_encrypt(int *pt, int *ct, int *key)
