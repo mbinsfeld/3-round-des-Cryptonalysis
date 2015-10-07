@@ -1,5 +1,5 @@
 all: hwdes.c
-	gcc -o hwdes hwdes.c
+	g++ -o hwdes hwdes.cpp
 
 clean:
 	$(RM) hwdes

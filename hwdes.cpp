@@ -28,7 +28,7 @@
 #define FINAL_REVERSE 0
 
 // Set this from 0-2 to change pt/ct pairs
-#define PAIRS 0 
+#define PAIRS 2
 
 void des_encrypt(int *pt, int *ct, int *key);
 void getkey(int *key, char *rk, int round);
@@ -232,52 +232,50 @@ static char p[] = { 0,
 
 void attack_DES(){
 
-  int l0a = pairs[PAIRS][0][0][0];
-  int l0b = pairs[PAIRS][1][0][0];
-  int r0a = pairs[PAIRS][0][0][1];
-  int r0b = pairs[PAIRS][1][0][1];
-  int l3a = pairs[PAIRS][0][1][0];
-  int l3b = pairs[PAIRS][1][1][0];
-  int r3a = pairs[PAIRS][0][1][1];
-  int r3b = pairs[PAIRS][1][1][1];
+  int *l0a = &pairs[PAIRS][0][0][0];
+  int *l0b = &pairs[PAIRS][1][0][0];
+  int *l3a = &pairs[PAIRS][0][1][0];
+  int *l3b = &pairs[PAIRS][1][1][0];
+  int *r3a = &pairs[PAIRS][0][1][1];
+  int *r3b = &pairs[PAIRS][1][1][1];
 
-  char l3_t[65], r3_t[33], C_t[33], E_t[49], l0_t[65], inverted[33], temp[8];
+  char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], E_t[49];
+  char l0a_t[33], l0b_t[33], inverted[33], temp[8];
   int i, back_to_int;
   int E[9], C[9];
   int temp_e, temp_c;
-  int ct_l3[2] = {l3a, l3b};
-  int ct_r3[2] = {r3a, r3b};
-  int pt_l0[2] = {l0a, l0b};
-  char l3_diff[33], r3_diff[33], l0_diff[33];
 
-  unpack(ct_l3, l3_t);
-  unpack(ct_r3, r3_t);
-  unpack(pt_l0, l0_t);
+  unpack_32(l3a, l3a_t);
+  unpack_32(l3b, l3b_t);
+  unpack_32(r3a, r3a_t);
+  unpack_32(r3b, r3b_t);
+  unpack_32(l0a, l0a_t);
+  unpack_32(l0b, l0b_t);
 
   //First we traverse down f to find E
   //Diff for L3/R2
   for (i = 1; i <= 32; i++){
-   l3_diff[i] = l3_t[i] ^ l3_t[i+32];
+    l3a_t[i] ^= l3b_t[i];
   }
 
   //Expand Left
   for (i = 1; i <= 48; i++)
-      E_t[i] = l3_diff[exp1[i]];
+      E_t[i] = l3a_t[exp1[i]];
 
   //Now we will traverse up f to find C
   //Diff for R3
   for (i = 1; i <= 32; i++){
-    r3_diff[i] = r3_t[i] ^ r3_t[i+32];
+    r3a_t[i] ^= r3b_t[i];
   }
 
   //Diff for L0
   for (i = 1; i <= 32; i++){
-    l0_diff[i] = l0_t[i] ^ l0_t[i+32];
+    l0a_t[i] ^= l0b_t[i];
   }
 
   //Difference of differences of L0 and R3
   for (i = 1; i <= 32; i++){
-    inverted[i] = l0_diff[i] ^ r3_diff[i];
+    inverted[i] = l0a_t[i] ^ r3a_t[i];
   }
 
   //Reverse P using inverted array to find C
@@ -287,9 +285,9 @@ void attack_DES(){
   dump(C_t, 32);
   //Put E and C possibilities into array as ints
   int k = 0;
-  for (i = 1; i <= 48; i+=6){
-    for(int j = 0; j < 6; j++){
-       temp[j+1] = E_t[j+i]; 
+  for (i = 0; i < 48; i+=6){
+    for(int j = 1; j <= 6; j++){
+       temp[j] = E_t[j+i]; 
 
     }
     pack_6(&temp_e, temp);
@@ -301,10 +299,9 @@ void attack_DES(){
   }
 
   k = 0;
-
-  for (i = 1; i <= 32; i+=4){
-    for(int j = 0; j < 4; j++){
-       temp[j+1] = C_t[j+i]; 
+  for (i = 0; i < 32; i+=4){
+    for(int j = 1; j <= 4; j++){
+       temp[j] = C_t[j+i]; 
 
     }
     pack_4(&temp_c, temp);
@@ -331,13 +328,14 @@ std::vector<std::vector<int> > B;
  }
  for (int i = 0; i < B.size(); ++i)
  {
-  printf("Possibilities for B%d: \n", i);
+  printf("Possibilities for B%d: \n", i+1);
    std::vector<int> bs = B[i];
    for (int j = 0; j < bs.size(); ++j)
    {
      printf("%d\n", bs[j]);
    }
  }
+
 }
 
 void des_encrypt(int *pt, int *ct, int *key)
