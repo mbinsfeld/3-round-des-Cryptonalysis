@@ -2,6 +2,8 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <vector>
+#include <map>
 
 // My (slow) implementation of DES
 
@@ -39,11 +41,9 @@ void BuildINTables();
 void unpack_32(int *pt, char *ca);
 void pack_6(int *ct, char *ca);
 void pack_4(int *ct, char *ca);
-int* find_xor_pairs(int inputxor);
+std::map<int, int> find_xor_pairs(int inputxor);
 void BuildINTables();
 void unpack_6(int *pt, char *ca);
-void pack_2(int *ct, char *ca);
-void pack_4(int *ct, char *ca);
 
 
 //int sOut[8][exp2(6)][exp2[4]]
@@ -53,7 +53,7 @@ void pack_4(int *ct, char *ca);
 //Step 3: Figure out e vals by doing a few things and stuff
 
 //INTables[s][inputxor][outputxor][possibilities];
-int INTables[8][64][16][128];
+std::vector<int> INTables[8][64][16];
 
 //Input/output pairs
 int pairs[][2][2][2] = {
@@ -71,30 +71,22 @@ int pairs[][2][2][2] = {
     }
 };
 
+
+
+
 int main()
 {
 
-    BuildINTables();
-    for (int box_number = 0; box_number < 8; box_number++){
-      printf("box_number %d\n", box_number);
-      for(int i = 0; i < 128; i++){
-        if(INTables[box_number][52][1][i] >= 0){
-          //printf("%u\n", INTables[box_number][0x34][1][i]);
-          printf("%u\n", INTables[box_number][52][1][i]);
-        }
-      }
-    }
 
-/*
-    //ASboxTables();
-    int pt[2]={0x748502cd, 0x38451097};
-    int ct[2];
-    int key[2]={0x1a624c89, 0x520dec46};
+  //ASboxTables();
+  int pt[2]={0x748502cd, 0x38451097};
+  int ct[2];
+  int key[2]={0x1a624c89, 0x520dec46};
 
-    //des_encrypt(pt, ct, key);
-    attack_DES();
-    printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
-    */
+  //des_encrypt(pt, ct, key);
+  attack_DES();
+  printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
+  
 }
 
 
@@ -173,10 +165,9 @@ void BuildINTables(){
   for(int sbox = 0; sbox < 8; sbox++){
     for(unsigned int inputxor = 0; inputxor < 64; inputxor++){
       for(int outputxor = 0; outputxor < 16; outputxor++){
-        int length = 130;
-        for(int possibility = 0; possibility < length; possibility++){
-          INTables[sbox][inputxor][outputxor][possibility] = -1;
-        }
+        std::vector<int> v;
+        INTables[sbox][inputxor][outputxor] = v;
+        
       }
     }
   }
@@ -187,120 +178,45 @@ void BuildINTables(){
   for(int sbox = 0; sbox < 8; sbox++){
     //all possible input xors
     for(int inputxor = 0; inputxor < 64; inputxor++){
-      int possibilitiesArray[130];
-      int* tempArray = find_xor_pairs(inputxor);
-      for(int i = 0; i < 130; i++){
-        possibilitiesArray[i] = tempArray[i];
-      }
-      free(tempArray);
-      //each possibility
-      //printf("%d\n", inputxor);
-      int length = 130;
-      for(int possibility = 0; possibility < length; possibility++){
-        //if(possibilitiesArray[possibility] != -1){
-          int pos = possibilitiesArray[possibility];
-          int* posptr = &pos;
-          char temp[7]; 
-
-          unpack_6(posptr, temp);
-          //printf("%d\n", temp[6]);
-          char rowtemp[3] = {0, temp[1], temp[6]};
-          //printf("rowtemp, %d, %d\n", rowtemp[1], rowtemp[2]);
-          //dump(rowtemp, 2);
-          char collumntemp[5] = {0, temp[2], temp[3], temp[4], temp[5]};
-          int row;
-          int collumn;
-          pack_2(&row, rowtemp);
-         // printf("packed row: %d\n", row);
-          printf("\n");
-          pack_4(&collumn, collumntemp);
-
-          int sbox_position = (row * 16) + collumn;
-
-          //int outputxor = s[sbox][sbox_position];
-          int outputxor = s[sbox][(temp[1]*2+temp[6])*16 +
-        temp[2]*8 + temp[3]*4 + temp[4]*2 + temp[5]];
-          //outputxor = outputxor&1;
-          //outputxor >>= 1; 
-          //printf("outputxor: %d\n", outputxor);
-          INTables[sbox][inputxor][outputxor][possibility] = pos;
-          if(sbox == 0 && inputxor == 52 && outputxor == 1){
-            //printf("sbox: %d, inputxor: %d, outputxor: %d, possibilityIndex: %d, possibilitval: %d\n", sbox, inputxor, outputxor, possibility, possibilitiesArray[possibility]);
-          }
+      std::map<int, int> possibilities;
+      possibilities = find_xor_pairs(inputxor);
+      typedef std::map<int, int>::iterator iter;
+      for(iter pos = possibilities.begin(); pos != possibilities.end(); pos++){
+        int key = pos->first;
+        int value = pos->second;
+        char keyUnpacked[7];
+        unpack_6(&key, keyUnpacked);
+        char valueUnpacked[7];
+        unpack_6(&value, valueUnpacked);
+        int output1 = s[sbox][(keyUnpacked[1]*2+keyUnpacked[6])*16 + 
+          keyUnpacked[2]*8 + keyUnpacked[3]*4 + keyUnpacked[4]*2 + keyUnpacked[5]];
+        int output2 = s[sbox][(valueUnpacked[1]*2+valueUnpacked[6])*16 + 
+          valueUnpacked[2]*8 + valueUnpacked[3]*4 + valueUnpacked[4]*2 + valueUnpacked[5]];
+        int outputxor = output1^output2;
+        //if(inputxor == 26 && sbox == 0){
+        //  printf("at 26 pushing key = %d\n", key);
+        //  printf("outputxor: %d\n", outputxor);
         //}
+        INTables[sbox][inputxor][outputxor].push_back(key);
+        //INTables[sbox][inputxor][outputxor].push_back(value);
       }
-      /*printf("\n");
-      printf("\n");
-      printf("\n");
-      printf("\n");
-      printf("\n");
-      printf("\n");*/
-      /*printf("inputxor: %d\n", inputxor);
-      for(int i = 0; i < 64; i++){
-        printf("    %d\n", possibilitiesArray[i]);
-      }
-      printf("\n");
-      printf("\n");
-      printf("\n");
-      printf("\n");
-      printf("\n");
-      printf("\n");*/
     }
   }
 }
 
 
 
-int* find_xor_pairs(int inputxor){
-  //int possibilities[(int)exp2(12)]
-  int* possibilities = (int*)malloc(130 * sizeof(int));
-  //int* altPossibilities = malloc(64 * sizeof(int));
-  for(int i = 0; i < 130; i++){
-    possibilities[i] = -1;
-  }
+std::map<int, int> find_xor_pairs(int inputxor){
+  std::map<int, int> possibilities;
   int count = 0;
   for(int i = 0; i < 64; i++){
     for(int j = 0; j < 64; j++){
-      //printf("i: %d: j%d\n", i, j);
       if((i^j) == inputxor){
-        char ich[7], jch[7], inputch[7];
-        int* iptr = &i;
-        int* jptr = &j;
-        int* inputptr = &inputxor;
-        unpack_6(iptr, ich);
-        unpack_6(jptr, jch);
-        unpack_6(inputptr, inputch);
-        printf("i\n");
-        dump(ich, 6);
-        printf("j\n");
-        dump(jch, 6);
-        printf("input\n");
-        dump(inputch, 6);
-        printf("\n");
-
-
-        if(count >= 128){
-          printf("not enough space\n");
-          printf("i: %d, j: %d count: %d\n, inputxor: %d", i, j, count, inputxor);
-          exit(1);
-        }
-        possibilities[count] = j;
+        possibilities[i] = j;
         count++;
-        //printf("test\n");
-        //possibilities[count] = j;
-        //count++;
       }
     }
   }
-
-  printf("%d possibilities calculated for inputxor: %d\n", count, inputxor);
-
-  /*for(int i = 0; i < 64; i++){
-    if(possibilities[i] != -1){
-      altPossibilities[i] = inputxor^possibilities[i];
-      //printf("%d\n", altPossibilities[i]);
-    }
-  }*/
   return possibilities; 
 }
 
@@ -309,69 +225,69 @@ static char p[] = { 0,
 16,  7, 20, 21, 29, 12, 28, 17,  1, 15, 23, 26,  5, 18, 31, 10,
  2,  8, 24, 14, 32, 27,  3,  9, 19, 13, 30,  6, 22, 11,  4, 25 };
 
+ static char pinverse[] = {0,
+9,  17, 23, 31, 13, 28,  2, 18, 24, 16, 30,  6, 26, 20, 10,  1, 
+8,  14, 25,  3,  4, 29, 11, 19, 32, 12, 22,  7,  5, 27, 15, 21};
+
 
 void attack_DES(){
 
-  int *l0a = &pairs[PAIRS][0][0][0];
-  int *l0b = &pairs[PAIRS][1][0][0];
-  int *r0a = &pairs[PAIRS][0][0][1];
-  int *r0b = &pairs[PAIRS][1][0][1];
-  int *l3a = &pairs[PAIRS][0][1][0];
-  int *l3b = &pairs[PAIRS][1][1][0];
-  int *r3a = &pairs[PAIRS][0][1][1];
-  int *r3b = &pairs[PAIRS][1][1][1];
+  int l0a = pairs[PAIRS][0][0][0];
+  int l0b = pairs[PAIRS][1][0][0];
+  int r0a = pairs[PAIRS][0][0][1];
+  int r0b = pairs[PAIRS][1][0][1];
+  int l3a = pairs[PAIRS][0][1][0];
+  int l3b = pairs[PAIRS][1][1][0];
+  int r3a = pairs[PAIRS][0][1][1];
+  int r3b = pairs[PAIRS][1][1][1];
 
-  char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], E_t[49];
-  char l0a_t[33], l0b_t[33], inverted[33], temp[8];
+  char l3_t[65], r3_t[33], C_t[33], E_t[49], l0_t[65], inverted[33], temp[8];
   int i, back_to_int;
   int E[9], C[9];
   int temp_e, temp_c;
+  int ct_l3[2] = {l3a, l3b};
+  int ct_r3[2] = {r3a, r3b};
+  int pt_l0[2] = {l0a, l0b};
+  char l3_diff[33], r3_diff[33], l0_diff[33];
 
-  unpack_32(l3a, l3a_t);
-  unpack_32(l3b, l3b_t);
-  unpack_32(r3a, r3a_t);
-  unpack_32(r3b, r3b_t);
-  unpack_32(l0a, l0a_t);
-  unpack_32(l0b, l0b_t);
+  unpack(ct_l3, l3_t);
+  unpack(ct_r3, r3_t);
+  unpack(pt_l0, l0_t);
 
   //First we traverse down f to find E
   //Diff for L3/R2
   for (i = 1; i <= 32; i++){
-    l3a_t[i] ^= l3b_t[i];
+   l3_diff[i] = l3_t[i] ^ l3_t[i+32];
   }
 
   //Expand Left
   for (i = 1; i <= 48; i++)
-      E_t[i] = l3a_t[exp1[i]];
+      E_t[i] = l3_diff[exp1[i]];
 
   //Now we will traverse up f to find C
   //Diff for R3
   for (i = 1; i <= 32; i++){
-    r3a_t[i] ^= r3b_t[i];
+    r3_diff[i] = r3_t[i] ^ r3_t[i+32];
   }
 
   //Diff for L0
   for (i = 1; i <= 32; i++){
-    l0a_t[i] ^= l0b_t[i];
+    l0_diff[i] = l0_t[i] ^ l0_t[i+32];
   }
 
   //Difference of differences of L0 and R3
   for (i = 1; i <= 32; i++){
-    inverted[i] = l0a_t[i] ^ r3a_t[i];
+    inverted[i] = l0_diff[i] ^ r3_diff[i];
   }
 
   //Reverse P using inverted array to find C
   for (i = 1; i <= 32; i++)
-    C_t[p[i]] = inverted[p[i]];
-
-   dump(E_t, 48);
-   dump(C_t, 32);
+    C_t[i] = inverted[pinverse[i]];
+  dump(E_t, 48);
+  dump(C_t, 32);
   //Put E and C possibilities into array as ints
-  int k = 1;
-  unsigned int result = 0;
-
+  int k = 0;
   for (i = 1; i <= 48; i+=6){
-      temp[0] = 0;
     for(int j = 0; j < 6; j++){
        temp[j+1] = E_t[j+i]; 
 
@@ -380,23 +296,48 @@ void attack_DES(){
     E[k] = temp_e;
     k++;
   }
+  for (int i = 0; i < 8; i++){
+    printf(" %d", E[i]);
+  }
 
-  k=1;
+  k = 0;
+
   for (i = 1; i <= 32; i+=4){
-      temp[0] = 0;
     for(int j = 0; j < 4; j++){
        temp[j+1] = C_t[j+i]; 
 
     }
-    dump(temp, 4);
     pack_4(&temp_c, temp);
     C[k] = temp_c;
     k++;
   }
-  for(i=1;i<=8;i++){
-    printf("%d ", C[i]);
+  printf("\nC:\n");
+for (int i = 0; i < 8; i++){
+    printf(" %d", C[i]);
   }
 
+BuildINTables(); 
+//printf("test\n");
+std::vector<std::vector<int> > B;
+ for (int i = 0; i < 8; i++){
+  std::vector<int> v = INTables[i][E[i]][C[i]];
+  //rintf("test2\n");
+  std::vector<int> placeholder;
+  B.push_back(placeholder);
+  for(int j = 0; j < v.size(); j++){
+    if(!v.empty())
+      B[i].push_back(v[j]);
+  }
+ }
+ for (int i = 0; i < B.size(); ++i)
+ {
+  printf("Possibilities for B%d: \n", i);
+   std::vector<int> bs = B[i];
+   for (int j = 0; j < bs.size(); ++j)
+   {
+     printf("%d\n", bs[j]);
+   }
+ }
 }
 
 void des_encrypt(int *pt, int *ct, int *key)
@@ -555,7 +496,6 @@ void unpack(int *pt, char *ca)
 	ca[i+32] = (b & 1);
 	b >>= 1;
     }
-
     //dump(ca, 64);
 }
 //unpacks 32 bit values into a char array
@@ -568,10 +508,8 @@ void unpack_32(int *pt, char *ca)
     {
   ca[i] = (a & 1);
   a >>= 1;
-
     }
-
-    //dump(ca, 64);
+    //dump(ca, 32);
 }
 
 //unpacks 32 bit values into a char array
