@@ -39,11 +39,14 @@ void ASboxTables();
 void attack_DES();
 void BuildINTables();
 void unpack_32(int *pt, char *ca);
+void unpack_48(int *pt, char *ca);
 void pack_6(int *ct, char *ca);
 void pack_4(int *ct, char *ca);
+void pack_48(long *ct, char *ca);
 std::map<int, int> find_xor_pairs(int inputxor);
 void BuildINTables();
 void unpack_6(int *pt, char *ca);
+std::vector<int> key_possibilities(std::vector<std::vector<int> > J);
 
 
 //int sOut[8][exp2(6)][exp2[4]]
@@ -71,9 +74,6 @@ int pairs[][2][2][2] = {
     }
 };
 
-
-
-
 int main()
 {
 
@@ -88,8 +88,6 @@ int main()
   printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
   
 }
-
-
 
 // the expansion function E()
 char exp1[]={  0,
@@ -204,8 +202,6 @@ void BuildINTables(){
   }
 }
 
-
-
 std::map<int, int> find_xor_pairs(int inputxor){
   std::map<int, int> possibilities;
   int count = 0;
@@ -241,7 +237,7 @@ void attack_DES(){
 
   char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], E_t[49];
   char l0a_t[33], l0b_t[33], inverted[33], temp[8];
-  int i, back_to_int;
+  int i;
   int E[9], C[9];
   int temp_e, temp_c;
 
@@ -281,8 +277,7 @@ void attack_DES(){
   //Reverse P using inverted array to find C
   for (i = 1; i <= 32; i++)
     C_t[i] = inverted[pinverse[i]];
-  dump(E_t, 48);
-  dump(C_t, 32);
+
   //Put E and C possibilities into array as ints
   int k = 0;
   for (i = 0; i < 48; i+=6){
@@ -293,9 +288,6 @@ void attack_DES(){
     pack_6(&temp_e, temp);
     E[k] = temp_e;
     k++;
-  }
-  for (int i = 0; i < 8; i++){
-    printf(" %d", E[i]);
   }
 
   k = 0;
@@ -308,13 +300,11 @@ void attack_DES(){
     C[k] = temp_c;
     k++;
   }
-  /*printf("\nC:\n");
-for (int i = 0; i < 8; i++){
-    printf(" %d", C[i]);
-  }*/
 
+//Construct INTables
 BuildINTables(); 
-//printf("test\n");
+
+//Build vector to store B values
 std::vector<std::vector<int> > B;
 std::vector<std::vector<int> > J;
  for (int i = 0; i < 8; i++){
@@ -337,6 +327,7 @@ std::vector<std::vector<int> > J;
      printf("%d\n", bs[j]);
    }
  }*/
+//Cycle through B vector and xor values with E for Js 
 for (int i = 0; i < 8; ++i){
    std::vector<int> bs = B[i];
    std::vector<int> placeholder2;
@@ -344,8 +335,8 @@ for (int i = 0; i < 8; ++i){
    for(int j = 0; j < bs.size(); ++j){
       J[i].push_back(bs[j]^E[i]);
    }
-}
-  /*
+  }
+/*  
 for (int i = 0; i < J.size(); ++i)
  {
   printf("Possibilities for J%d: \n", i+1);
@@ -356,6 +347,71 @@ for (int i = 0; i < J.size(); ++i)
    }
  }
 */
+std::vector<int> kposs = key_possibilities(J);
+
+}
+
+std::vector<int> key_possibilities(std::vector<std::vector<int> > J){
+ int iter = 0;
+ char temp_key[49];
+ std::vector<int> Key_possibilites;
+ 
+ for (int i = 0; i < J[0].size(); i++){
+  char J0[7];
+  int temp = J[0][i];
+  unpack_6(&temp, J0);
+  for(int j = 0; j < J[1].size(); j++){
+    char J1[7];
+    int temp1 = J[1][j];
+    unpack_6(&temp1, J1);
+    for(int k = 0; k < J[2].size(); k++){
+      char J2[7];
+      int temp2 = J[2][k];
+      unpack_6(&temp2, J2);
+      for(int l = 0; l < J[3].size(); l++){
+        char J3[7];
+        int temp3 = J[3][l];
+        unpack_6(&temp3, J3);
+        for(int p = 0; p < J[4].size(); p++){
+          char J4[7];
+          int temp4 = J[4][p];
+          unpack_6(&temp4, J4);
+          for (int u = 0; u < J[5].size(); u++){
+            char J5[7];
+            int temp5 = J[5][u];
+            unpack_6(&temp5, J5);
+            for (int n = 0; n < J[6].size(); n++){
+              char J6[7];
+              int temp6 = J[6][n];
+              unpack_6(&temp6, J6);
+              for (int m = 0; m < J[7].size(); m++){
+                char J7[7];
+                int temp7 = J[7][m];
+                unpack_6(&temp7, J7);
+
+                char rndkey[49] = {0, J0[1], J0[2], J0[3], J0[4], J0[5], J0[6],
+                                      J1[1], J1[2], J1[3], J1[4], J1[5], J1[6],
+                                      J2[1], J2[2], J2[3], J2[4], J2[5], J2[6],
+                                      J3[1], J3[2], J3[3], J3[4], J3[5], J3[6],
+                                      J4[1], J4[2], J4[3], J4[4], J4[5], J4[6],
+                                      J5[1], J5[2], J5[3], J5[4], J5[5], J5[6],
+                                      J6[1], J6[2], J6[3], J6[4], J6[5], J6[6],
+                                      J7[1], J7[2], J7[3], J7[4], J7[5], J7[6]};
+                long possibility;
+                pack_48(&possibility, rndkey);
+                //printf("%ld\n", possibility);
+                Key_possibilites.push_back(possibility);
+                //printf("%d\n", (int)sizeof(long));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  }
+  return Key_possibilites;
 }
 
 void des_encrypt(int *pt, int *ct, int *key)
@@ -487,11 +543,23 @@ void getkey(int *key, char *rk, int round)
     // but double shift all except 1, 2, 9, and 16 
     for (k=1; k <= round; k++)
     {
-	p = s[1]; for (i=1; i <=27; i++)  s[i] = s[i+1]; s[28] = p;
-	p = s[29]; for (i=29; i <=55; i++)  s[i] = s[i+1]; s[56] = p;
-	if (k == 1  ||  k == 2  ||  k == 9  ||  k == 16) continue;
-	p = s[1]; for (i=1; i <=27; i++)  s[i] = s[i+1]; s[28] = p;
-	p = s[29]; for (i=29; i <=55; i++)  s[i] = s[i+1]; s[56] = p;
+    	p = s[1]; 
+      for (i=1; i <=27; i++)  
+          s[i] = s[i+1]; 
+      s[28] = p;
+    	p = s[29]; 
+      for (i=29; i <=55; i++)  
+          s[i] = s[i+1]; 
+      s[56] = p;
+    	if (k == 1  ||  k == 2  ||  k == 9  ||  k == 16) continue;
+    	p = s[1]; 
+      for (i=1; i <=27; i++) 
+         s[i] = s[i+1]; 
+      s[28] = p;
+    	p = s[29]; 
+      for (i=29; i <=55; i++)  
+        s[i] = s[i+1]; 
+      s[56] = p;
     }
 
     // finally, apply pc2 to these 56 bits to produce the 48-bit round key
@@ -516,6 +584,21 @@ void unpack(int *pt, char *ca)
     }
     //dump(ca, 64);
 }
+
+//unpacks 48 bit values into a char array
+void unpack_48(int *pt, char *ca)
+{
+    int i;
+    int a = pt[0];
+
+    for (i=48; i >= 1; i--)
+    {
+  ca[i] = (a & 1);
+  a >>= 1;
+    }
+    //dump(ca, 32);
+}
+
 //unpacks 32 bit values into a char array
 void unpack_32(int *pt, char *ca)
 {
@@ -529,6 +612,8 @@ void unpack_32(int *pt, char *ca)
     }
     //dump(ca, 32);
 }
+
+
 
 //unpacks 32 bit values into a char array
 void unpack_6(int *pt, char *ca)
@@ -594,6 +679,18 @@ void pack_2(int *ct, char *ca)
     ct[0] = 0;
 
     for (i=1; i <= 2; i++)
+    {
+  ct[0] <<= 1;        ct[0] += ca[i];   
+    }
+}
+
+void pack_48(long *ct, char *ca)
+{
+    int i;
+
+    ct[0] = 0;
+
+    for (i=1; i <= 48; i++)
     {
   ct[0] <<= 1;        ct[0] += ca[i];   
     }
