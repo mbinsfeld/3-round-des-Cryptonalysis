@@ -28,7 +28,7 @@
 #define FINAL_REVERSE 0
 
 // Set this from 0-2 to change pt/ct pairs
-#define PAIRS 0
+#define PAIRS 2
 
 void des_encrypt(int *pt, int *ct, int *key);
 void getkey(int *key, char *rk, int round);
@@ -246,18 +246,34 @@ static char p[] = { 0,
 
 void attack_DES(){
 
+  char ip[65], ipi[65], pt1[2], pt2[2], ct1[2], ct2[2];
   char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], l3_xor[49];
   char l0a_t[33], l0b_t[33], inverted[33], temp[8], E_t[49], E_t_xor[49];
   int i;
   int E[9], C[9], E_xor[9];
   int temp_e, temp_c;
 
+ /* char pt1 = {l0a, r0a};
+  char pt2 = {l0b, r0b};
+  char ct1 = {l3a, r3a};
+  char ct2 = {l3b, r3b};
+
+  //Set up IP and IPinverse
+  for (i=1; i <= 64; i += 2)
+    {
+  ip[((x+4) << 3) + y] = i; ip[(x << 3) + y] = i+1;
+  ipi[i] = ((x+4) << 3) + y; ipi[i+1] = (x << 3) + y;
+
+  x++;
+  if (i % 8 == 7) { y--; x=0; }
+    }*/
+
   unpack_32(l3a, l3a_t);
   unpack_32(l3b, l3b_t);
   unpack_32(r3a, r3a_t);
   unpack_32(r3b, r3b_t);
   unpack_32(l0a, l0a_t);
-  unpack_32(l0b, l0b_t);
+  unpack_32(l0b, l0b_t);  
 
   //First we traverse down f to find E
   //Diff for L3/R2
@@ -266,9 +282,10 @@ void attack_DES(){
   }
 
   //Expand Left
-  for (i = 1; i <= 48; i++)
+  for (i = 1; i <= 48; i++){
       E_t_xor[i] = l3_xor[exp1[i]];
       E_t[i] = l3a_t[exp1[i]];
+    }
 
   //Now we will traverse up f to find C
   //Diff for R3
@@ -347,29 +364,33 @@ std::vector<std::vector<long> > J;
    std::vector<long> bs = B[i];
    for (int j = 0; j < bs.size(); ++j)
    {
-     printf("%d\n", bs[j]);
+     printf("%ld\n", bs[j]);
    }
  }*/
+
+ int temp_array;
 //Cycle through B vector and xor values with E for Js 
 for (int i = 0; i < 8; ++i){
    std::vector<long> bs = B[i];
    std::vector<long> placeholder2;
    J.push_back(placeholder2);
+
    for(int j = 0; j < bs.size(); ++j){
-      J[i].push_back(bs[j]^E[i]);
+      temp_array = bs[j] ^ E[i];
+      J[i].push_back(temp_array);
    }
   }
-/*  
+ /*
 for (int i = 0; i < J.size(); ++i)
  {
   printf("Possibilities for J%d: \n", i+1);
    std::vector<long> Js = J[i];
    for (int j = 0; j < Js.size(); ++j)
    {
-     printf("%d\n", Js[j]);
+     printf("%ld\n", Js[j]);
    }
- }
-*/
+ }*/
+
   std::vector<long> kposs = key_possibilities(J);
 /*for(i =0; i < kposs.size(); i++){
   printf("%ld\n", kposs[i]);
@@ -564,15 +585,16 @@ long brute_key(char *k){
                 k[31] = bin[p];
                 for(u=0; u<2; u++){
                   k[35] = bin[u];
+                  //dump(k, 64);
                   pack(k_temp, k);
                   des_encrypt(pt, ct, k_temp);
                   //dump(k, 64);
                   ++tested;
-                  //printf("CT returned: %08d %08d\n", ct[0], ct[1]);
-                  //printf("CT checked: %08d %08d\n", ct_check[0], ct_check[1]);
+                  //printf("CT returned: %d %d\n", ct[0], ct[1]);
+                  //printf("CT checked: %d %d\n", ct_check[0], ct_check[1]);
                   if (ct[0] == ct_check[0] && ct[1] == ct_check[1]){
                     ++found;
-                    printf("Found key: ");
+                    printf("%lld Found key: ", found);
                     dump(k, 64);
                     printf("\n");
                       //long possibility;
