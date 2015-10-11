@@ -39,14 +39,16 @@ void ASboxTables();
 void attack_DES();
 void BuildINTables();
 void unpack_32(int *pt, char *ca);
-void unpack_48(int *pt, char *ca);
+void unpack_48(long *pt, char *ca);
 void pack_6(int *ct, char *ca);
 void pack_4(int *ct, char *ca);
 void pack_48(long *ct, char *ca);
 std::map<int, int> find_xor_pairs(int inputxor);
 void BuildINTables();
 void unpack_6(int *pt, char *ca);
-std::vector<int> key_possibilities(std::vector<std::vector<int> > J);
+std::vector<long> key_possibilities(std::vector<std::vector<long> > J);
+std::vector<long> reverse_key_schedule(std::vector<long> J);
+long brute_key(char *k);
 
 
 //int sOut[8][exp2(6)][exp2[4]]
@@ -56,7 +58,7 @@ std::vector<int> key_possibilities(std::vector<std::vector<int> > J);
 //Step 3: Figure out e vals by doing a few things and stuff
 
 //INTables[s][inputxor][outputxor][possibilities];
-std::vector<int> INTables[8][64][16];
+std::vector<long> INTables[8][64][16];
 
 //Input/output pairs
 int pairs[][2][2][2] = {
@@ -73,6 +75,15 @@ int pairs[][2][2][2] = {
         { {0x12549847, 0x013fec86}, {0xae46e276, 0x16c26b04} }
     }
 };
+
+int *l0a = &pairs[PAIRS][0][0][0];
+int *l0b = &pairs[PAIRS][1][0][0];
+int *r0a = &pairs[PAIRS][0][0][1];
+int *r0b = &pairs[PAIRS][1][0][1];
+int *l3a = &pairs[PAIRS][0][1][0];
+int *l3b = &pairs[PAIRS][1][1][0];
+int *r3a = &pairs[PAIRS][0][1][1];
+int *r3b = &pairs[PAIRS][1][1][1];
 
 int main()
 {
@@ -107,6 +118,13 @@ static unsigned char pc1[] = { 0,
        63, 55, 47, 39, 31, 23, 15,   7, 62, 54, 46, 38, 30, 22,
        14,  6, 61, 53, 45, 37, 29,  21, 13,  5, 28, 20, 12,  4 };
 
+static unsigned char pc1_rev[] = { 0,
+       8, 16, 24, 56, 52, 44, 36,   7, 15, 23, 55, 51, 43, 35, 
+       6, 14, 22, 54, 50, 42, 34,   5, 13, 21, 53, 49, 41, 33, 
+       4, 12, 20, 28, 48, 40, 32,   3, 11, 19, 27, 47, 39, 31, 
+       2, 10, 18, 26, 46, 38, 30,   1,  9, 17, 25, 45, 37, 29};
+
+//9, 18, 22, 25, 35, 38, 43, 54
 static unsigned char pc2[] = { 0, 
        14, 17, 11, 24,  1,  5,       3, 28, 15,  6, 21, 10,
        23, 19, 12,  4, 26,  8,      16,  7, 27, 20, 13,  2,
@@ -163,7 +181,7 @@ void BuildINTables(){
   for(int sbox = 0; sbox < 8; sbox++){
     for(unsigned int inputxor = 0; inputxor < 64; inputxor++){
       for(int outputxor = 0; outputxor < 16; outputxor++){
-        std::vector<int> v;
+        std::vector<long> v;
         INTables[sbox][inputxor][outputxor] = v;
         
       }
@@ -228,17 +246,10 @@ static char p[] = { 0,
 
 void attack_DES(){
 
-  int *l0a = &pairs[PAIRS][0][0][0];
-  int *l0b = &pairs[PAIRS][1][0][0];
-  int *l3a = &pairs[PAIRS][0][1][0];
-  int *l3b = &pairs[PAIRS][1][1][0];
-  int *r3a = &pairs[PAIRS][0][1][1];
-  int *r3b = &pairs[PAIRS][1][1][1];
-
-  char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], E_t[49];
-  char l0a_t[33], l0b_t[33], inverted[33], temp[8];
+  char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], l3_xor[49];
+  char l0a_t[33], l0b_t[33], inverted[33], temp[8], E_t[49], E_t_xor[49];
   int i;
-  int E[9], C[9];
+  int E[9], C[9], E_xor[9];
   int temp_e, temp_c;
 
   unpack_32(l3a, l3a_t);
@@ -251,11 +262,12 @@ void attack_DES(){
   //First we traverse down f to find E
   //Diff for L3/R2
   for (i = 1; i <= 32; i++){
-    l3a_t[i] ^= l3b_t[i];
+    l3_xor[i] = l3a_t[i] ^ l3b_t[i];
   }
 
   //Expand Left
   for (i = 1; i <= 48; i++)
+      E_t_xor[i] = l3_xor[exp1[i]];
       E_t[i] = l3a_t[exp1[i]];
 
   //Now we will traverse up f to find C
@@ -278,8 +290,19 @@ void attack_DES(){
   for (i = 1; i <= 32; i++)
     C_t[i] = inverted[pinverse[i]];
 
-  //Put E and C possibilities into array as ints
+  //Put E, E_xor and C possibilities into array as ints
   int k = 0;
+  for (i = 0; i < 48; i+=6){
+    for(int j = 1; j <= 6; j++){
+       temp[j] = E_t_xor[j+i]; 
+
+    }
+    pack_6(&temp_e, temp);
+    E_xor[k] = temp_e;
+    k++;
+  }
+
+  k = 0;
   for (i = 0; i < 48; i+=6){
     for(int j = 1; j <= 6; j++){
        temp[j] = E_t[j+i]; 
@@ -305,12 +328,12 @@ void attack_DES(){
 BuildINTables(); 
 
 //Build vector to store B values
-std::vector<std::vector<int> > B;
-std::vector<std::vector<int> > J;
+std::vector<std::vector<long> > B;
+std::vector<std::vector<long> > J;
  for (int i = 0; i < 8; i++){
-  std::vector<int> v = INTables[i][E[i]][C[i]];
+  std::vector<long> v = INTables[i][E_xor[i]][C[i]];
   //rintf("test2\n");
-  std::vector<int> placeholder;
+  std::vector<long> placeholder;
   B.push_back(placeholder);
   for(int j = 0; j < v.size(); j++){
     if(!v.empty())
@@ -321,7 +344,7 @@ std::vector<std::vector<int> > J;
  for (int i = 0; i < B.size(); ++i)
  {
   printf("Possibilities for B%d: \n", i+1);
-   std::vector<int> bs = B[i];
+   std::vector<long> bs = B[i];
    for (int j = 0; j < bs.size(); ++j)
    {
      printf("%d\n", bs[j]);
@@ -329,8 +352,8 @@ std::vector<std::vector<int> > J;
  }*/
 //Cycle through B vector and xor values with E for Js 
 for (int i = 0; i < 8; ++i){
-   std::vector<int> bs = B[i];
-   std::vector<int> placeholder2;
+   std::vector<long> bs = B[i];
+   std::vector<long> placeholder2;
    J.push_back(placeholder2);
    for(int j = 0; j < bs.size(); ++j){
       J[i].push_back(bs[j]^E[i]);
@@ -340,21 +363,26 @@ for (int i = 0; i < 8; ++i){
 for (int i = 0; i < J.size(); ++i)
  {
   printf("Possibilities for J%d: \n", i+1);
-   std::vector<int> Js = J[i];
+   std::vector<long> Js = J[i];
    for (int j = 0; j < Js.size(); ++j)
    {
      printf("%d\n", Js[j]);
    }
  }
 */
-std::vector<int> kposs = key_possibilities(J);
+  std::vector<long> kposs = key_possibilities(J);
+/*for(i =0; i < kposs.size(); i++){
+  printf("%ld\n", kposs[i]);
+}*/
+
+  std::vector<long> kposs_64 = reverse_key_schedule(kposs);
 
 }
 
-std::vector<int> key_possibilities(std::vector<std::vector<int> > J){
+std::vector<long> key_possibilities(std::vector<std::vector<long> > J){
  int iter = 0;
  char temp_key[49];
- std::vector<int> Key_possibilites;
+ std::vector<long> Key_possibilites;
  
  for (int i = 0; i < J[0].size(); i++){
   char J0[7];
@@ -409,9 +437,160 @@ std::vector<int> key_possibilities(std::vector<std::vector<int> > J){
       }
     }
   }
-
   }
   return Key_possibilites;
+}
+
+std::vector<long> reverse_key_schedule(std::vector<long> k_poss){
+  char J_56[57], K_64[65];
+  std::vector<long> K_final;
+  int i;
+  long check = 0;
+  long long num = 0;
+  for(int m = 0; m < k_poss.size(); m++){
+    char J_48[49];
+    long temp = k_poss[m];
+    unpack_48(&temp, J_48);
+    for (int j = 1; j <= 56; j++){
+      int index = 1;
+      if ( j == 9 || j == 18 || j == 22 || j == 25 ||
+           j == 35 || j == 38 || j == 43 || j == 54 ){
+        J_56[j] = 2;
+        continue;
+      }
+      while (index <= 48 && pc2[index] != j ) ++index;
+      if (index <= 48 && pc2[index] == j){
+        J_56[j] = J_48[index];
+      }   
+    }
+    /*printf("Befor: ");
+    for(int i = 1; i <= 56; i++){
+      printf("%d", J_56[i]);
+      }
+      printf("\n");*/
+
+     int p;
+      p = J_56[1]; 
+    for (i=2; i <=28; i++)  
+        J_56[i-1] = J_56[i]; 
+    J_56[28] = p;
+    p = J_56[29]; 
+    for (i=30; i <=56; i++)  
+        J_56[i-1] = J_56[i]; 
+    J_56[56] = p;
+  
+    p = J_56[1]; 
+    for (i=2; i <=28; i++) 
+       J_56[i-1] = J_56[i]; 
+    J_56[28] = p;
+    p = J_56[29]; 
+    for (i=30; i <=56; i++)  
+      J_56[i-1] = J_56[i]; 
+    J_56[56] = p;
+
+     /* printf("After: ");
+   for(int i = 1; i <= 56; i++){
+      printf("%d", J_56[i]);
+      }
+      printf("\n");*/
+
+   int par = 0;
+   int increment = 0; 
+   for (i = 1; i <= 56; i++){
+    K_64[i+par] = J_56[pc1_rev[i]];
+    increment++;
+    if (increment == 7){
+      par++;
+      K_64[i+par] = 0;
+      increment = 0;
+    }
+  }
+  //dump(K_64, 64);
+
+
+   /*printf("Final: ");
+   for(int i = 1; i <= 64; i++){
+      printf("%d", K_64[i]);
+      }
+      printf("\n");*/
+    check += brute_key(K_64);
+    num++;
+    //printf("Keys: %ld of %lld\n", check, num);
+    //Useless
+    long possibility;
+    pack_48(&possibility, K_64);
+    //printf("%ld\n", possibility);
+    K_final.push_back(possibility);
+  }
+  return K_final;
+}
+
+long brute_key(char *k){
+  // positions of unknowns 2, 5, 7, 9, 11, 30, 31, 35
+  int l0a_i = pairs[PAIRS][0][0][0];
+  int l0b_i = pairs[PAIRS][1][0][0];
+  int r0a_i = pairs[PAIRS][0][0][1];
+  int r0b_i = pairs[PAIRS][1][0][1];
+  int l3a_i = pairs[PAIRS][0][1][0];
+  int l3b_i = pairs[PAIRS][1][1][0];
+  int r3a_i = pairs[PAIRS][0][1][1];
+  int r3b_i = pairs[PAIRS][1][1][1];
+  long long found = 0; 
+  long long tested = 0;
+  std::vector<int> Key_Final;
+  char bin[2] = {0, 1};
+  int k_temp[2];
+  int pt[2] = {l0a_i, r0a_i};
+  int ct_check[2] = {l3a_i, r3a_i};
+  int ct[2];
+  int i, j, s, l, n, m, p, u;
+
+  for(i=0; i<2; i++){
+    k[2] = bin[i];
+    //0201212320200013110100030001022300211013010001030000101300001013
+    //printf("bin: %d\n",bin[i]);
+    //printf("key: %d\n",k[i]);
+    for(j=0; j<2; j++){
+      k[5] = bin[j];
+      for(s=0; s<2; s++){
+        k[7] = bin[s];
+        for(l=0; l<2; l++){
+          k[9] = bin[l];
+          for(n=0; n<2; n++){
+            k[11] = bin[n];
+            for(m=0; m<2; m++){
+              k[30] = bin[m];
+              for(p=0; p<2; p++){
+                k[31] = bin[p];
+                for(u=0; u<2; u++){
+                  k[35] = bin[u];
+                  pack(k_temp, k);
+                  des_encrypt(pt, ct, k_temp);
+                  //dump(k, 64);
+                  ++tested;
+                  //printf("CT returned: %08d %08d\n", ct[0], ct[1]);
+                  //printf("CT checked: %08d %08d\n", ct_check[0], ct_check[1]);
+                  if (ct[0] == ct_check[0] && ct[1] == ct_check[1]){
+                    ++found;
+                    printf("Found key: ");
+                    dump(k, 64);
+                    printf("\n");
+                      //long possibility;
+                      //pack_48(&possibility, k_temp);
+                      //printf("%ld\n", possibility);
+                      //Key_Final.push_back(possibility);
+                  }
+                  //printf("\nPairs found: %lld Tested: %lld\n", found, tested);
+
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return found;
 }
 
 void des_encrypt(int *pt, int *ct, int *key)
@@ -446,7 +625,7 @@ void des_encrypt(int *pt, int *ct, int *key)
     {
 	for (i = 1; i <= 64; i++)
 	    ptb[i] = pta[ip[i]];
-	printf("After IP: "); dump(ptb, 64);
+	//printf("After IP: "); dump(ptb, 64);
     }
     else
 	for (i = 1; i <= 64; i++)
@@ -454,20 +633,20 @@ void des_encrypt(int *pt, int *ct, int *key)
 
     for (round=1; round <= NUMRNDS; round++)
     {
-        printf("\n\n*** Round %d:\n", round);
+     //   printf("\n\n*** Round %d:\n", round);
 	// apply the expansion function E() to get ex from ptb's right half
 	for (i = 1; i <= 48; i++)
 	    ex[i] = ptb[exp1[i]+32];
-	printf("Expansion: "); dump(ex, 48);
+	//printf("Expansion: "); dump(ex, 48);
 
 	// get key for this round
 	getkey(key, rk, round);
-	printf("Round Key: "); dump(rk, 48);
+	//printf("Round Key: "); dump(rk, 48);
 	
 	// xor the round key rk into the expanded right half ex
 	for (i = 1; i <= 48; i++)
 	    ex[i] ^= rk[i];
-	printf("XOR output: ");  dump(ex, 48);
+	//printf("XOR output: ");  dump(ex, 48);
 
 	// and now apply the 8 S-boxes
 	for (i = 1; i <= 8; i++)
@@ -484,12 +663,12 @@ void des_encrypt(int *pt, int *ct, int *key)
 		sval >>= 1;
 	    }
 	}
-	printf("S-Box output: "); dump(rval, 32);
+	//printf("S-Box output: "); dump(rval, 32);
 
 	// finally apply the P permutation
 	for (i = 1; i <= 32; i++)
 	    mask[i] = rval[p[i]];
-	printf("Mask Value: "); dump(mask, 32);
+	//printf("Mask Value: "); dump(mask, 32);
 
 	// now we do the Feistel dance: move right side of ptb to
 	// the left, then store mask xor that left side in the right
@@ -499,7 +678,7 @@ void des_encrypt(int *pt, int *ct, int *key)
 	    ptb[i] = ptb[i+32];      // move right half to left
 	for (i = 1; i <= 32; i++)
 	    ptb[i+32] = temp[i] ^ mask[i];
-	printf("Round Output: "); dump(ptb, 64);
+	//printf("Round Output: "); dump(ptb, 64);
     }
     // Almost done; now apply IP^-1 to ptb (with halves reversed)
     if (FINAL_REVERSE)
@@ -519,7 +698,7 @@ void des_encrypt(int *pt, int *ct, int *key)
 	for (i=1; i <= 64; i++)
 	    cta[i] = ptb[i];
 
-    printf("\n\nCiphertext: "); dump(cta, 64);
+    //printf("\n\nCiphertext: "); dump(cta, 64);
 
     pack(ct, cta);
     
@@ -586,7 +765,7 @@ void unpack(int *pt, char *ca)
 }
 
 //unpacks 48 bit values into a char array
-void unpack_48(int *pt, char *ca)
+void unpack_48(long *pt, char *ca)
 {
     int i;
     int a = pt[0];
