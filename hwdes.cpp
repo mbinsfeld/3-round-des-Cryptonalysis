@@ -28,14 +28,14 @@
 #define FINAL_REVERSE 0
 
 // Set this from 0-2 to change pt/ct pairs DO NOT CHANGE
-#define PAIRS 0
+//#define PAIRS 0
 
 void des_encrypt(int *pt, int *ct, int *key);
 void getkey(int *key, char *rk, int round);
 void unpack(int *pt, char *ca);
 void pack(int *ct, char *ca);
 void dump(char *ca, int len);
-void attack_DES();
+std::vector<std::vector<long> > attack_DES(int PAIRS);
 void BuildINTables();
 void unpack_32(int *pt, char *ca);
 void unpack_48(long *pt, char *ca);
@@ -48,6 +48,7 @@ void unpack_6(int *pt, char *ca);
 std::vector<long> key_possibilities(std::vector<std::vector<long> > J);
 void reverse_key_schedule(std::vector<long> J);
 long brute_key(char *k);
+void buildRoundKey(std::vector<std::vector<long> > J0, std::vector<std::vector<long> > J1, std::vector<std::vector<long> > J2);
 
 //INTables[s][inputxor][outputxor][possibilities];
 std::vector<long> INTables[8][64][16];
@@ -68,14 +69,7 @@ int pairs[][2][2][2] = {
     }
 };
 
-int *l0a = &pairs[PAIRS][0][0][0];
-int *l0b = &pairs[PAIRS][1][0][0];
-int *r0a = &pairs[PAIRS][0][0][1];
-int *r0b = &pairs[PAIRS][1][0][1];
-int *l3a = &pairs[PAIRS][0][1][0];
-int *l3b = &pairs[PAIRS][1][1][0];
-int *r3a = &pairs[PAIRS][0][1][1];
-int *r3b = &pairs[PAIRS][1][1][1];
+
 
 int main()
 {
@@ -85,7 +79,16 @@ int main()
   //Construct INTables
   BuildINTables(); 
   //des_encrypt(pt, ct, key);
-  attack_DES();
+
+  std::vector<std::vector<long> > Js0;
+  std::vector<std::vector<long> > Js1;
+  std::vector<std::vector<long> > Js2;
+
+  Js0 = attack_DES(0);
+  Js1 = attack_DES(1);
+  Js2 = attack_DES(2);
+  buildRoundKey(Js0, Js1, Js2);
+
   printf("Ciphertext: %08x, %08x\n", ct[0], ct[1]);
   
 }
@@ -227,7 +230,7 @@ static char p[] = { 0,
 8,  14, 25,  3,  4, 29, 11, 19, 32, 12, 22,  7,  5, 27, 15, 21};
 
 
-void attack_DES(){
+std::vector<std::vector<long> > attack_DES(int PAIRS){
 
   char ip[65], ipi[65], pt1[2], pt2[2], ct1[2], ct2[2];
   char l3a_t[33], l3b_t[33], r3a_t[33], r3b_t[33], C_t[33], l3_xor[49];
@@ -235,6 +238,15 @@ void attack_DES(){
   int i;
   int E[9], C[9], E_xor[9];
   int temp_e, temp_c;
+
+  int *l0a = &pairs[PAIRS][0][0][0];
+  int *l0b = &pairs[PAIRS][1][0][0];
+  int *r0a = &pairs[PAIRS][0][0][1];
+  int *r0b = &pairs[PAIRS][1][0][1];
+  int *l3a = &pairs[PAIRS][0][1][0];
+  int *l3b = &pairs[PAIRS][1][1][0];
+  int *r3a = &pairs[PAIRS][0][1][1];
+  int *r3b = &pairs[PAIRS][1][1][1];
 
   unpack_32(l3a, l3a_t);
   unpack_32(l3b, l3b_t);
@@ -321,21 +333,51 @@ std::vector<std::vector<long> > J;
 
  int temp_array;
 //Cycle through B vector and xor values with E for Js 
-for (int i = 0; i < 8; ++i){
-   std::vector<long> bs = B[i];
-   std::vector<long> placeholder2;
-   J.push_back(placeholder2);
+  for (int i = 0; i < 8; ++i){
+    std::vector<long> bs = B[i];
+    std::vector<long> placeholder2;
+    J.push_back(placeholder2);
 
-   for(int j = 0; j < bs.size(); ++j){
+    for(int j = 0; j < bs.size(); ++j){
       temp_array = bs[j] ^ E[i];
       J[i].push_back(temp_array);
-   }
+    }
+  }
+  return J;
+
+
+
+
+  //std::vector<long> kposs = key_possibilities(J);
+
+  //reverse_key_schedule(kposs);
+
+}
+
+void buildRoundKey(std::vector<std::vector<long> > J0, std::vector<std::vector<long> > J1, std::vector<std::vector<long> > J2){
+  std::vector<std::vector<long> > common;
+  for(int i = 0; i < 8; i++){
+    std::vector<long> v;
+    common.push_back(v);
+  }
+  for(int l = 0; l < 8; l++){
+    for(int i = 0; i < J0[l].size(); i++){
+      for(int j = 0; j < J1[l].size(); j++){
+        for(int k = 0; k < J2[l].size(); k++){
+          if((J0[l][i] == J1[l][j]) && (J0[l][i] == J2[l][k])){
+            common[l].push_back(J0[l][i]);
+          }
+        }
+      }
+    }
   }
 
-  std::vector<long> kposs = key_possibilities(J);
-
-  reverse_key_schedule(kposs);
-
+  for(int i = 0; i < common.size(); i++){
+    printf("common: %d\n", i);
+    for(int j = 0; j < common[i].size(); j++){
+      printf("%ld\n", common[i][j]);
+    }
+  }
 }
 
 std::vector<long> key_possibilities(std::vector<std::vector<long> > J){
@@ -459,12 +501,12 @@ void reverse_key_schedule(std::vector<long> k_poss){
   }
 
   //brute force the bits marked 2
-    check = brute_key(K_64);
+    //check = brute_key(K_64);
   }
 
 }
 
-long brute_key(char *k){
+/*long brute_key(char *k){
   // positions of unknowns 3, 4, 35, 38, 42, 44, 61, 62
   int l0a_i = pairs[PAIRS][0][0][0];
   int l0b_i = pairs[PAIRS][1][0][0];
@@ -531,7 +573,7 @@ long brute_key(char *k){
   }
 
   return tested;
-}
+}*/
 
 void des_encrypt(int *pt, int *ct, int *key)
 {
