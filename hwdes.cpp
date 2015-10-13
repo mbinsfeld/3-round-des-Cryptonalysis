@@ -200,7 +200,7 @@ void BuildINTables(){
         int output2 = s[sbox][(valueUnpacked[1]*2+valueUnpacked[6])*16 + 
           valueUnpacked[2]*8 + valueUnpacked[3]*4 + valueUnpacked[4]*2 + valueUnpacked[5]];
         int outputxor = output1^output2;
-        INTables[sbox][inputxor][outputxor].push_back(key);
+        INTables[sbox][inputxor][outputxor].push_back((long)key);
       }
     }
   }
@@ -279,6 +279,8 @@ std::vector<std::vector<long> > attack_DES(int PAIRS){
     inverted[i] = l0a_t[i] ^ r3a_t[i];
   }
 
+  
+
   //Reverse P using inverted array to find C
   for (i = 1; i <= 32; i++)
     C_t[i] = inverted[pinverse[i]];
@@ -287,7 +289,7 @@ std::vector<std::vector<long> > attack_DES(int PAIRS){
   int k = 0;
   for (i = 0; i < 48; i+=6){
     for(int j = 1; j <= 6; j++){
-       temp[j] = E_t_xor[j+i]; 
+       temp[j] = E_t_xor[i+j]; 
 
     }
     pack_6(&temp_e, temp);
@@ -298,7 +300,7 @@ std::vector<std::vector<long> > attack_DES(int PAIRS){
   k = 0;
   for (i = 0; i < 48; i+=6){
     for(int j = 1; j <= 6; j++){
-       temp[j] = E_t[j+i]; 
+       temp[j] = E_t[i+j]; 
 
     }
     pack_6(&temp_e, temp);
@@ -309,7 +311,7 @@ std::vector<std::vector<long> > attack_DES(int PAIRS){
   k = 0;
   for (i = 0; i < 32; i+=4){
     for(int j = 1; j <= 4; j++){
-       temp[j] = C_t[j+i];
+       temp[j] = C_t[i+j];
     }
     pack_4(&temp_c, temp);
     C[k] = temp_c;
@@ -324,11 +326,7 @@ std::vector<std::vector<long> > J;
  for (int i = 0; i < 8; i++){
   std::vector<long> v = INTables[i][E_xor[i]][C[i]];
   std::vector<long> placeholder;
-  B.push_back(placeholder);
-  for(int j = 0; j < v.size(); j++){
-    if(!v.empty())
-      B[i].push_back(v[j]);
-  }
+  B.push_back(v);
  }
 
  int temp_array;
@@ -375,7 +373,7 @@ void buildRoundKey(std::vector<std::vector<long> > J0, std::vector<std::vector<l
   std::vector<long> keyPoss = key_possibilities(common);
   printf("size: %lu\n", keyPoss.size());
   for(int i = 0; i < keyPoss.size(); i++){
-    printf("key: %ld\n", keyPoss[i]);
+    printf("key: %08lx\n", keyPoss[i]);
   }
 
   reverse_key_schedule(keyPoss);
@@ -420,7 +418,6 @@ std::vector<long> key_possibilities(std::vector<std::vector<long> > J){
                 char J7[7];
                 int temp7 = J[7][m];
                 unpack_6(&temp7, J7);
-
                 char rndkey[49] = {0, J0[1], J0[2], J0[3], J0[4], J0[5], J0[6],
                                       J1[1], J1[2], J1[3], J1[4], J1[5], J1[6],
                                       J2[1], J2[2], J2[3], J2[4], J2[5], J2[6],
@@ -440,6 +437,8 @@ std::vector<long> key_possibilities(std::vector<std::vector<long> > J){
     }
   }
   }
+
+
   return Key_possibilites;
 }
 
@@ -456,6 +455,8 @@ void reverse_key_schedule(std::vector<long> k_poss){
     char J_48[49];
     long temp = k_poss[m];
     unpack_48(&temp, J_48);
+    printf("round key!!\n");
+    dump(J_48, 48);
 
     for (int j = 1; j <= 56; j++){
       int index = 1;
@@ -514,24 +515,17 @@ void reverse_key_schedule(std::vector<long> k_poss){
 long brute_key(char *k){
   // positions of unknowns 19, 22, 26, 45, 46, 52, 55, 57
   //0001111000001100102,112,1002,00111000100000010022,000002,102,020100110 
-  int PAIRS = 0;
+  //int PAIRS = 0;
   dump(k, 64);
-  int l0a_i = pairs[PAIRS][0][0][0];
-  int l0b_i = pairs[PAIRS][1][0][0];
-  int r0a_i = pairs[PAIRS][0][0][1];
-  int r0b_i = pairs[PAIRS][1][0][1];
-  int l3a_i = pairs[PAIRS][0][1][0];
-  int l3b_i = pairs[PAIRS][1][1][0];
-  int r3a_i = pairs[PAIRS][0][1][1];
-  int r3b_i = pairs[PAIRS][1][1][1];
   long long found = 0; 
   long long tested = 0;
   std::vector<int> Key_Final;
   char bin[2] = {0, 1};
   int k_temp[2];
-  int pt[2] = {l0a_i, r0a_i};
+  int pt[2] = {pairs[0][0][0][0], pairs[0][0][0][1]};
   int pt2[2] = {pairs[1][0][0][0], pairs[1][0][0][1]};
   int pt3[2] = {pairs[2][0][0][0], pairs[2][0][0][1]};
+  int ct_check[2] = {pairs[0][0][1][0], pairs[0][0][1][1]};
   int ct2_check[2] = {pairs[1][0][1][0], pairs[1][0][1][1]};
   int ct3_check[2] = {pairs[2][0][1][0], pairs[2][0][1][1]};
   int ct[2];
@@ -557,9 +551,8 @@ long brute_key(char *k){
                   des_encrypt(pt, ct, k_temp);
                   ++tested;
                   //printf("CT returnd: %08x %08x\n", ct[0], ct[1]);
-                  //printf("CT checked: %08x %08x\n", l3a_i, r3a_i);
-                  if ((ct[0] == l3a_i) && (ct[1] == r3a_i)){
-                    //++found;
+                  //printf("CT checked: %08x %08x\n", ct_check[0], ct_check[1]);
+                  if ((ct[0] == ct_check[0]) && (ct[1] == ct_check[1])){
                     des_encrypt(pt2, ct, k_temp);
                     if ((ct[0] == ct2_check[0]) && (ct[1] == ct2_check[1])){
                        des_encrypt(pt3, ct, k_temp);
@@ -736,6 +729,7 @@ void getkey(int *key, char *rk, int round)
     // finally, apply pc2 to these 56 bits to produce the 48-bit round key
     for (i=1; i <= 48; i++)
         rk[i] = s[pc2[i]];
+    dump(rk, 48);
 
 }
 
