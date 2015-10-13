@@ -372,12 +372,14 @@ void buildRoundKey(std::vector<std::vector<long> > J0, std::vector<std::vector<l
     }
   }
 
-  for(int i = 0; i < common.size(); i++){
-    printf("common: %d\n", i);
-    for(int j = 0; j < common[i].size(); j++){
-      printf("%ld\n", common[i][j]);
-    }
+  std::vector<long> keyPoss = key_possibilities(common);
+  printf("size: %lu\n", keyPoss.size());
+  for(int i = 0; i < keyPoss.size(); i++){
+    printf("key: %ld\n", keyPoss[i]);
   }
+
+  reverse_key_schedule(keyPoss);
+
 }
 
 std::vector<long> key_possibilities(std::vector<std::vector<long> > J){
@@ -454,6 +456,7 @@ void reverse_key_schedule(std::vector<long> k_poss){
     char J_48[49];
     long temp = k_poss[m];
     unpack_48(&temp, J_48);
+
     for (int j = 1; j <= 56; j++){
       int index = 1;
       if ( j == 9 || j == 18 || j == 22 || j == 25 ||
@@ -466,26 +469,28 @@ void reverse_key_schedule(std::vector<long> k_poss){
         J_56[j] = J_48[index];
       }   
     }
-
     //right shift two times
-     int p;
+    for (int k=1; k <= 3; k++)
+    {
+       int p;
+        p = J_56[28]; 
+      for (i=28; i >=2; i--)  
+          J_56[i] = J_56[i-1]; 
+      J_56[1] = p;
+      p = J_56[56]; 
+      for (i=56; i >=30; i--)  
+          J_56[i] = J_56[i-1]; 
+      J_56[29] = p;
+      if (k == 1  ||  k == 2  ||  k == 9  ||  k == 16) continue;
       p = J_56[28]; 
-    for (i=28; i >=2; i--)  
-        J_56[i] = J_56[i-1]; 
-    J_56[1] = p;
-    p = J_56[56]; 
-    for (i=56; i >=30; i--)  
-        J_56[i] = J_56[i-1]; 
-    J_56[29] = p;
-  
-    p = J_56[28]; 
-    for (i=28; i >=2; i--)  
-        J_56[i] = J_56[i-1]; 
-    J_56[1] = p;
-    p = J_56[56]; 
-    for (i=56; i >=30; i--)  
-        J_56[i] = J_56[i-1]; 
-    J_56[29] = p;
+      for (i=28; i >=2; i--)  
+          J_56[i] = J_56[i-1]; 
+      J_56[1] = p;
+      p = J_56[56]; 
+      for (i=56; i >=30; i--)  
+          J_56[i] = J_56[i-1]; 
+      J_56[29] = p;
+    }
 
     //apply pc1 reverse
    int par = 0;
@@ -501,13 +506,16 @@ void reverse_key_schedule(std::vector<long> k_poss){
   }
 
   //brute force the bits marked 2
-    //check = brute_key(K_64);
+    check = brute_key(K_64);
   }
 
 }
 
-/*long brute_key(char *k){
-  // positions of unknowns 3, 4, 35, 38, 42, 44, 61, 62
+long brute_key(char *k){
+  // positions of unknowns 19, 22, 26, 45, 46, 52, 55, 57
+  //0001111000001100102,112,1002,00111000100000010022,000002,102,020100110 
+  int PAIRS = 0;
+  dump(k, 64);
   int l0a_i = pairs[PAIRS][0][0][0];
   int l0b_i = pairs[PAIRS][1][0][0];
   int r0a_i = pairs[PAIRS][0][0][1];
@@ -530,32 +538,32 @@ void reverse_key_schedule(std::vector<long> k_poss){
   int i, j, s, l, n, m, p, u;
   //Brute force remaining bits for each J possibilities
   for(i=0; i<2; i++){
-    k[3] = bin[i];
+    k[19] = bin[i];
     for(j=0; j<2; j++){
-      k[4] = bin[j];
+      k[22] = bin[j];
       for(s=0; s<2; s++){
-        k[35] = bin[s];
+        k[26] = bin[s];
         for(l=0; l<2; l++){
-          k[38] = bin[l];
+          k[45] = bin[l];
           for(n=0; n<2; n++){
-            k[42] = bin[n];
+            k[46] = bin[n];
             for(m=0; m<2; m++){
-              k[44] = bin[m];
+              k[52] = bin[m];
               for(p=0; p<2; p++){
-                k[61] = bin[p];
+                k[55] = bin[p];
                 for(u=0; u<2; u++){
-                  k[62] = bin[u];
+                  k[57] = bin[u];
                   pack(k_temp, k);
                   des_encrypt(pt, ct, k_temp);
                   ++tested;
-                  //printf("CT returned: %08x %08x\n", ct[0], ct[1]);
+                  //printf("CT returnd: %08x %08x\n", ct[0], ct[1]);
                   //printf("CT checked: %08x %08x\n", l3a_i, r3a_i);
-                  if (ct[0] == l3a_i && ct[1] == r3a_i){
+                  if ((ct[0] == l3a_i) && (ct[1] == r3a_i)){
                     //++found;
                     des_encrypt(pt2, ct, k_temp);
-                    if (ct[0] == ct2_check[0] && ct[1] == ct2_check[1]){
+                    if ((ct[0] == ct2_check[0]) && (ct[1] == ct2_check[1])){
                        des_encrypt(pt3, ct, k_temp);
-                      if (ct[0] == ct3_check[0] && ct[1] == ct3_check[1]){
+                      if ((ct[0] == ct3_check[0]) && (ct[1] == ct3_check[1])){
                         printf("%lld Found key: ", found);
                         printf("%d\n", *k_temp);
                         dump(k, 64);
@@ -573,7 +581,7 @@ void reverse_key_schedule(std::vector<long> k_poss){
   }
 
   return tested;
-}*/
+}
 
 void des_encrypt(int *pt, int *ct, int *key)
 {
@@ -700,6 +708,7 @@ void getkey(int *key, char *rk, int round)
     for (i=1; i <= 56; i++)
         s[i] = t[pc1[i]];
 
+    //dump(s, 56);
     // next circular shift each half once for i up to the round number
     // but double shift all except 1, 2, 9, and 16 
     for (k=1; k <= round; k++)
@@ -722,6 +731,7 @@ void getkey(int *key, char *rk, int round)
         s[i] = s[i+1]; 
       s[56] = p;
     }
+    //dump(s, 56);
 
     // finally, apply pc2 to these 56 bits to produce the 48-bit round key
     for (i=1; i <= 48; i++)
